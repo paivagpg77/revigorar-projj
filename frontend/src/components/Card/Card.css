@@ -1,0 +1,79 @@
+.card {
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+  transition: box-shadow var(--transition), transform var(--transition);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.card__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  background: var(--color-accent-soft);
+  color: var(--color-primary);
+  margin-bottom: var(--space-4);
+}
+
+.card__title {
+  font-size: var(--fs-md);
+  margin-bottom: var(--space-3);
+}
+
+.card__description {
+  font-size: var(--fs-sm);
+  margin-bottom: var(--space-3);
+}
+
+.card__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.card__list li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  font-size: var(--fs-sm);
+  color: var(--color-text-muted);
+}
+
+.card__check {
+  color: var(--color-primary);
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+/* StatBox — small icon + label used in "Principais benefícios" rows */
+.statbox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  text-align: center;
+}
+
+.statbox__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--color-bg-mint);
+  color: var(--color-primary);
+}
+
+.statbox span {
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  color: var(--color-text);
+}

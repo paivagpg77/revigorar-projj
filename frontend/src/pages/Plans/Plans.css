@@ -1,0 +1,241 @@
+.pricing__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-5);
+}
+
+.pricing-card {
+  position: relative;
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.pricing-card.is-highlight {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-6px);
+}
+
+.pricing-card__badge {
+  position: absolute;
+  top: -13px;
+  left: var(--space-6);
+  background: var(--color-primary-dark);
+  color: var(--color-white);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  padding: 4px 14px;
+  border-radius: var(--radius-pill);
+}
+
+.pricing-card h3 {
+  font-size: var(--fs-md);
+}
+
+.pricing-card__price {
+  font-size: var(--fs-2xl);
+  font-weight: 700;
+  color: var(--color-primary-dark);
+}
+
+.pricing-card__price span {
+  font-size: var(--fs-sm);
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+
+.pricing-card__installment {
+  font-size: var(--fs-xs);
+  color: var(--color-text-muted);
+  margin-top: -8px;
+}
+
+.pricing-card ul {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: var(--space-3) 0;
+}
+
+.pricing-card li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-sm);
+  color: var(--color-text-muted);
+}
+
+.pricing-card li svg {
+  color: var(--color-primary);
+}
+
+.pricing-card__cta {
+  width: 100%;
+}
+
+/* EXTRA GRID */
+.extra-grid {
+  background: var(--color-bg-soft);
+}
+
+.extra-grid__inner {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr 1fr;
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.implementation-card,
+.comparison-card,
+.faq-card {
+  background: var(--color-white);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  padding: var(--space-5);
+  height: 100%;
+}
+
+.implementation-card h3,
+.comparison-card h3,
+.faq-card h3 {
+  font-size: var(--fs-md);
+  margin-bottom: var(--space-3);
+}
+
+.implementation-card__price {
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  color: var(--color-primary-dark);
+  margin-bottom: var(--space-3);
+}
+
+.implementation-card__label {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.implementation-card ul {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: var(--space-3) 0;
+}
+
+.implementation-card li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-sm);
+  color: var(--color-text-muted);
+}
+
+.implementation-card li svg {
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.implementation-card__note {
+  font-size: var(--fs-xs);
+}
+
+.comparison-card table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+}
+
+.comparison-card th {
+  text-align: left;
+  font-size: var(--fs-xs);
+  color: var(--color-text-muted);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.comparison-card td {
+  padding: var(--space-2) var(--space-1);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.comparison-card td svg {
+  color: var(--color-primary);
+}
+
+.comparison-card tr:last-child td {
+  border-bottom: none;
+}
+
+.faq-list li {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.faq-list li:last-child {
+  border-bottom: none;
+}
+
+.faq-list button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  background: none;
+  border: none;
+  text-align: left;
+  padding: var(--space-3) 0;
+  font-size: var(--fs-sm);
+  color: var(--color-text);
+}
+
+.faq-list button svg {
+  flex-shrink: 0;
+  transition: transform var(--transition);
+  color: var(--color-text-muted);
+}
+
+.faq-list li.is-open button svg {
+  transform: rotate(180deg);
+  color: var(--color-primary);
+}
+
+/* CLOSING BANNER */
+.closing-banner {
+  background: linear-gradient(135deg, var(--color-primary-dark), var(--color-primary));
+  padding: var(--space-7) 0;
+}
+
+.closing-banner__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.closing-banner__inner h3 {
+  color: var(--color-white);
+  font-size: var(--fs-lg);
+}
+
+.closing-banner__inner p {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+@media (max-width: 960px) {
+  .pricing__grid {
+    grid-template-columns: 1fr;
+  }
+  .pricing-card.is-highlight {
+    transform: none;
+  }
+  .extra-grid__inner {
+    grid-template-columns: 1fr;
+  }
+}
