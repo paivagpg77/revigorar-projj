@@ -1,4 +1,4 @@
-const API = 'http://localhost:3000/api';
+const API = `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api`;
 
 function getToken() {
   return localStorage.getItem('revigorar_token');
@@ -101,6 +101,12 @@ export async function getAppointments(params = '') {
 export async function createAppointment(body) {
   return (await request('/appointments', { method: 'POST', body: JSON.stringify(body) })).data;
 }
+export async function updateAppointment(id, body) {
+  return (await request(`/appointments/${id}`, { method: 'PUT', body: JSON.stringify(body) })).data;
+}
+export async function deleteAppointment(id) {
+  return request(`/appointments/${id}`, { method: 'DELETE' });
+}
 
 // Financial
 export async function getFinancialDashboard() {
@@ -114,6 +120,9 @@ export async function getFinancialRecords(params = '') {
 export async function createFinancialRecord(body) {
   return (await request('/financial', { method: 'POST', body: JSON.stringify(body) })).data;
 }
+export async function deleteFinancialRecord(id) {
+  return request(`/financial/${id}`, { method: 'DELETE' });
+}
 
 // Stock
 export async function getStockItems() {
@@ -122,6 +131,29 @@ export async function getStockItems() {
 
 export async function getStockAlerts() {
   return (await request('/stock/alerts')).data;
+}
+export async function createStockItem(body) {
+  return (await request('/stock', { method: 'POST', body: JSON.stringify(body) })).data;
+}
+export async function updateStockItem(id, body) {
+  return (await request(`/stock/${id}`, { method: 'PUT', body: JSON.stringify(body) })).data;
+}
+export async function addStockMovement(body) {
+  return (await request('/stock/movement', { method: 'POST', body: JSON.stringify(body) })).data;
+}
+
+// Specialties
+export async function getSpecialties() {
+  return (await request('/specialties')).data;
+}
+export async function createSpecialty(body) {
+  return (await request('/specialties', { method: 'POST', body: JSON.stringify(body) })).data;
+}
+export async function updateSpecialty(id, body) {
+  return (await request(`/specialties/${id}`, { method: 'PUT', body: JSON.stringify(body) })).data;
+}
+export async function deleteSpecialty(id) {
+  return request(`/specialties/${id}`, { method: 'DELETE' });
 }
 
 export { getToken, setToken, clearToken, getUser, setUser };

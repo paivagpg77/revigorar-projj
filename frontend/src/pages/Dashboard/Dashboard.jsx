@@ -54,21 +54,21 @@ export default function Dashboard() {
         <div className="sb-section">
           <div className="sb-label">PRINCIPAL</div>
           <button className="sb-item active"><LayoutDashboard size={17}/> Painel</button>
-          <button className="sb-item"><Users size={17}/> Pacientes <span className="sb-badge">{patients.meta.total}</span></button>
-          <button className="sb-item"><Calendar size={17}/> Agenda</button>
-          <button className="sb-item"><FileText size={17}/> Avaliações</button>
+          <button className="sb-item" onClick={()=>navigate('/pacientes')}><Users size={17}/> Pacientes <span className="sb-badge">{patients.meta.total}</span></button>
+          <button className="sb-item" onClick={()=>navigate('/agenda')}><Calendar size={17}/> Agenda</button>
+          <button className="sb-item" onClick={()=>navigate('/avaliacoes')}><FileText size={17}/> Avaliações</button>
         </div>
         <div className="sb-section">
           <div className="sb-label">GESTÃO</div>
-          <button className="sb-item"><DollarSign size={17}/> Financeiro</button>
-          <button className="sb-item"><Package size={17}/> Estoque {alerts.length > 0 && <span className="sb-badge warn">{alerts.length}</span>}</button>
+          <button className="sb-item" onClick={()=>navigate('/financeiro')}><DollarSign size={17}/> Financeiro</button>
+          <button className="sb-item" onClick={()=>navigate('/estoque')}><Package size={17}/> Estoque {alerts.length > 0 && <span className="sb-badge warn">{alerts.length}</span>}</button>
           <button className="sb-item"><MessageCircle size={17}/> Comunicação</button>
         </div>
         <div className="sb-section">
           <div className="sb-label">ESPECIALIDADES</div>
-          <button className="sb-item"><Stethoscope size={17}/> Estomias</button>
-          <button className="sb-item"><Zap size={17}/> Laserterapia</button>
-          <button className="sb-item"><Footprints size={17}/> Podiatria</button>
+          <button className="sb-item" onClick={()=>navigate('/especialidades')}><Stethoscope size={17}/> Estomias</button>
+          <button className="sb-item" onClick={()=>navigate('/especialidades')}><Zap size={17}/> Laserterapia</button>
+          <button className="sb-item" onClick={()=>navigate('/especialidades')}><Footprints size={17}/> Podiatria</button>
         </div>
         <div className="sb-bottom">
           <button className="sb-item"><Settings size={17}/> Configurações</button>
@@ -121,7 +121,7 @@ export default function Dashboard() {
           <div className="dash-grid">
             {/* PACIENTES RECENTES */}
             <div className="card">
-              <div className="card-head"><span>Pacientes recentes</span><button className="card-action">Ver todos</button></div>
+              <div className="card-head"><span>Pacientes recentes</span><button className="card-action" onClick={()=>navigate('/pacientes')}>Ver todos</button></div>
               <div className="card-body">
                 {patients.data.length === 0 ? (
                   <div className="empty">
@@ -152,7 +152,7 @@ export default function Dashboard() {
 
             {/* FINANCEIRO */}
             <div className="card">
-              <div className="card-head"><span>Resumo financeiro</span><button className="card-action">Detalhes</button></div>
+              <div className="card-head"><span>Resumo financeiro</span><button className="card-action" onClick={()=>navigate('/financeiro')}>Detalhes</button></div>
               <div className="card-body">
                 <div className="fin-rows">
                   <div className="fin-row"><span>Receita bruta</span><span className="fin-val positive">R$ {Number(financial.income).toLocaleString('pt-BR')}</span></div>
@@ -172,7 +172,7 @@ export default function Dashboard() {
           {/* STOCK ALERTS */}
           {alerts.length > 0 && (
             <div className="card" style={{marginTop:20}}>
-              <div className="card-head"><span>⚠️ Alertas de estoque</span><button className="card-action">Gerenciar</button></div>
+              <div className="card-head"><span>⚠️ Alertas de estoque</span><button className="card-action" onClick={()=>navigate('/estoque')}>Gerenciar</button></div>
               <div className="card-body">
                 <div className="stock-list">
                   {alerts.map(a => (
