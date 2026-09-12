@@ -14,6 +14,7 @@ import patientRoutes from './routes/patient.routes';
 import woundRoutes from './routes/wound.routes';
 import evaluationRoutes from './routes/evaluation.routes';
 import { appointmentRoutes, financialRoutes, stockRoutes } from './routes/business.routes';
+import specialtyRoutes from './routes/specialty.routes';
 
 const app = express();
 
@@ -42,6 +43,7 @@ app.use('/api/evaluations',  authGuard, evaluationRoutes);
 app.use('/api/appointments', authGuard, appointmentRoutes);
 app.use('/api/financial',    authGuard, financialRoutes);
 app.use('/api/stock',        authGuard, stockRoutes);
+app.use('/api/specialties',  authGuard, specialtyRoutes);
 
 // ── 404 ────────────────────────────────────
 app.use((_req, res) => {

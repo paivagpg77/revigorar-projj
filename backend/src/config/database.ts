@@ -11,6 +11,7 @@ import { FinancialRecord } from '../models/FinancialRecord';
 import { Appointment } from '../models/Appointment';
 import { StockItem } from '../models/StockItem';
 import { StockMovement } from '../models/StockMovement';
+import { Specialty } from '../models/Specialty';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -32,6 +33,7 @@ export const AppDataSource = new DataSource({
     Appointment,
     StockItem,
     StockMovement,
+    Specialty,
   ],
   migrations: [__dirname + '/../database/migrations/*.ts'],
 });
