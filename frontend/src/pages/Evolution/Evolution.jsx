@@ -1,153 +1,290 @@
-import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
-import { Image as ImageIcon, Download } from 'lucide-react'
-import Breadcrumb from '../../components/Breadcrumb/Breadcrumb.jsx'
-import Tabs from '../../components/Tabs/Tabs.jsx'
-import Badge from '../../components/Badge/Badge.jsx'
-import { PATIENTS } from '../../data/mockData.js'
-import { useToast } from '../../components/Toast/ToastContext.jsx'
-import { getPatientRecords, getEvolutionTimeline } from '../../services/evolutionsService.js'
-import { getPatientPhotos } from '../../services/photosService.js'
-import './Evolution.css'
+import { useEffect, useState } from "react";
+import { useParams, Link } from "react-router-dom";
+import { getPatient } from "../../services/patientsService.js";
+import {
+  getEvolutionTimeline,
+  getPatientRecords,
+} from "../../services/evolutionsService.js";
+import { getPatientPhotos } from "../../services/photosService.js";
 
-const TABS = ['Linha do tempo', 'Registros', 'Fotos']
-
-const DEFAULT_TIMELINE = [
-  {
-    date: '12/09/2025 10:24',
-    title: 'Evolução fotográfica',
-    description: 'Ferida em processo de cicatrização. Sem sinais de infecção.',
-    details: 'Comprimento 3,9 cm, largura 2,6 cm, profundidade 0,4 cm. Tecido de granulação predominante. Registrado por Ana Silva.',
-    hasPhoto: true,
-  },
-  {
-    date: '05/09/2025 14:30',
-    title: 'Prescrição de enfermagem',
-    description: 'Troca de cobertura com hidrogel.',
-    details: 'Cobertura trocada a cada 48h. Sem sinais de reação alérgica ou desconforto relatado pelo paciente.',
-  },
-  {
-    date: '28/08/2025 09:10',
-    title: 'Avaliação clínica',
-    description: 'Ferida com 3,2 cm de comprimento, 2,8 cm de largura.',
-    details: 'Bordas regulares, pele perilesional íntegra. Reavaliação agendada para 7 dias.',
-  },
-]
+import "./Evolution.css";
 
 export default function Evolution() {
-  const { id } = useParams()
-  const [tab, setTab] = useState('Linha do tempo')
-  const [expanded, setExpanded] = useState(() => new Set())
-  const [timeline, setTimeline] = useState(DEFAULT_TIMELINE)
-  const [records, setRecords] = useState([])
-  const [photos, setPhotos] = useState([])
-  const patient = PATIENTS.find((p) => String(p.id) === id) || PATIENTS[0]
-  const showToast = useToast()
+  const { id } = useParams();
+
+  const [patient, setPatient] = useState(null);
+  const [timeline, setTimeline] = useState([]);
+  const [records, setRecords] = useState([]);
+  const [photos, setPhotos] = useState([]);
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    let active2 = true
-    getEvolutionTimeline(id).then((data) => { if (active2 && data) setTimeline(data) })
-    getPatientRecords(id).then((data) => { if (active2) setRecords(data) })
-    getPatientPhotos(id).then((data) => {
-      if (active2) setPhotos(data.map((date, i) => ({ date, label: `Registro ${i + 1}` })))
-    })
-    return () => { active2 = false }
-  }, [id])
+    async function loadData() {
+      if (!id) {
+        setError("Paciente não informado.");
+        setLoading(false);
+        return;
+      }
 
-  const toggleDetails = (date) => {
-    setExpanded((prev) => {
-      const next = new Set(prev)
-      if (next.has(date)) next.delete(date)
-      else next.add(date)
-      return next
-    })
+      setLoading(true);
+      setError("");
+
+      const results = await Promise.allSettled([
+        getPatient(id),
+        getEvolutionTimeline(id),
+        getPatientRecords(id),
+        getPatientPhotos(id),
+      ]);
+
+      const patientResult = results[0];
+      const timelineResult = results[1];
+      const recordsResult = results[2];
+      const photosResult = results[3];
+
+      if (patientResult.status === "fulfilled") {
+        setPatient(patientResult.value);
+      } else {
+        setPatient(null);
+        setError("Não foi possível carregar o paciente.");
+      }
+
+      if (timelineResult.status === "fulfilled") {
+        setTimeline(
+          Array.isArray(timelineResult.value)
+            ? timelineResult.value
+            : timelineResult.value?.content ||
+              timelineResult.value?.items ||
+              timelineResult.value?.data ||
+              []
+        );
+      } else {
+        setTimeline([]);
+      }
+
+      if (recordsResult.status === "fulfilled") {
+        setRecords(
+          Array.isArray(recordsResult.value)
+            ? recordsResult.value
+            : recordsResult.value?.content ||
+              recordsResult.value?.items ||
+              recordsResult.value?.data ||
+              []
+        );
+      } else {
+        setRecords([]);
+      }
+
+      if (photosResult.status === "fulfilled") {
+        setPhotos(
+          Array.isArray(photosResult.value)
+            ? photosResult.value
+            : photosResult.value?.content ||
+              photosResult.value?.items ||
+              photosResult.value?.data ||
+              []
+        );
+      } else {
+        setPhotos([]);
+      }
+
+      setLoading(false);
+    }
+
+    loadData();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="evolution-page">
+        <div className="evolution-loading">
+          Carregando evolução do paciente...
+        </div>
+      </div>
+    );
   }
 
-  const downloadPhoto = (date) => {
-    showToast(`Baixando foto de ${date}...`)
+  if (error && !patient) {
+    return (
+      <div className="evolution-page">
+        <div className="evolution-error">
+          <h2>Não foi possível carregar</h2>
+          <p>{error}</p>
+
+          <Link to="/patients">
+            Voltar para pacientes
+          </Link>
+        </div>
+      </div>
+    );
   }
+
+  const patientName =
+    patient?.name ||
+    patient?.full_name ||
+    patient?.fullName ||
+    "Paciente";
+
+  const patientEmail =
+    patient?.email ||
+    "E-mail não informado";
+
+  const patientPhone =
+    patient?.phone ||
+    patient?.telephone ||
+    "Telefone não informado";
 
   return (
-    <div className="page">
-      <Breadcrumb
-        items={[
-          { label: 'Pacientes', to: '/pacientes' },
-          { label: patient.name, to: `/pacientes/${patient.id}` },
-          { label: 'Evolução do paciente' },
-        ]}
-      />
+    <div className="evolution-page">
+      <header className="evolution-header">
+        <div>
+          <Link to="/patients" className="back-link">
+            ← Voltar para pacientes
+          </Link>
 
-      <div className="panel">
-        <div className="evolution-head">
-          <h3 className="panel-title">Evolução do paciente</h3>
+          <h1>{patientName}</h1>
+
+          <p>
+            {patientEmail} · {patientPhone}
+          </p>
         </div>
-        <Tabs tabs={TABS} active={tab} onChange={setTab} />
+      </header>
 
-        {tab === 'Linha do tempo' && (
-          <ul className="evolution-timeline">
-            {timeline.map((item) => (
-              <li key={item.date}>
-                <span className="evolution-timeline__dot" />
-                <div className="evolution-timeline__body">
-                  <div className="evolution-timeline__row">
-                    <div>
-                      <span className="evolution-timeline__date">{item.date}</span>
-                      <strong>{item.title}</strong>
-                      <p>{item.description}</p>
-                    </div>
-                    {item.hasPhoto && (
-                      <div className="evolution-timeline__photo"><ImageIcon size={22} /></div>
-                    )}
+      <section className="evolution-section">
+        <div className="section-header">
+          <h2>Evoluções</h2>
+          <span>{timeline.length}</span>
+        </div>
+
+        {timeline.length === 0 ? (
+          <div className="empty-state">
+            <h3>Nenhuma evolução registrada</h3>
+            <p>
+              Ainda não existem evoluções cadastradas para este paciente.
+            </p>
+          </div>
+        ) : (
+          <div className="timeline">
+            {timeline.map((item, index) => {
+              const itemId = item?.id || index;
+
+              return (
+                <article
+                  className="timeline-item"
+                  key={itemId}
+                >
+                  <div className="timeline-date">
+                    {item?.created_at
+                      ? new Date(item.created_at).toLocaleDateString("pt-BR")
+                      : item?.date
+                      ? new Date(item.date).toLocaleDateString("pt-BR")
+                      : "Data não informada"}
                   </div>
-                  <button className="btn btn-secondary evolution-timeline__cta" onClick={() => toggleDetails(item.date)}>
-                    {expanded.has(item.date) ? 'Ocultar detalhes' : 'Ver detalhes'}
-                  </button>
-                  {expanded.has(item.date) && (
-                    <p className="evolution-timeline__details">{item.details}</p>
+
+                  <div className="timeline-content">
+                    <h3>
+                      {item?.title ||
+                        item?.type ||
+                        "Evolução clínica"}
+                    </h3>
+
+                    <p>
+                      {item?.description ||
+                        item?.notes ||
+                        item?.content ||
+                        "Sem descrição."}
+                    </p>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      <section className="evolution-section">
+        <div className="section-header">
+          <h2>Registros</h2>
+          <span>{records.length}</span>
+        </div>
+
+        {records.length === 0 ? (
+          <div className="empty-state">
+            <h3>Nenhum registro encontrado</h3>
+            <p>
+              Este paciente ainda não possui registros.
+            </p>
+          </div>
+        ) : (
+          <div className="records-list">
+            {records.map((record, index) => (
+              <article
+                className="record-card"
+                key={record?.id || index}
+              >
+                <h3>
+                  {record?.title ||
+                    record?.type ||
+                    "Registro clínico"}
+                </h3>
+
+                <p>
+                  {record?.description ||
+                    record?.notes ||
+                    record?.content ||
+                    "Sem descrição."}
+                </p>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="evolution-section">
+        <div className="section-header">
+          <h2>Fotos</h2>
+          <span>{photos.length}</span>
+        </div>
+
+        {photos.length === 0 ? (
+          <div className="empty-state">
+            <h3>Nenhuma foto cadastrada</h3>
+            <p>
+              Ainda não existem fotos para este paciente.
+            </p>
+          </div>
+        ) : (
+          <div className="photos-grid">
+            {photos.map((photo, index) => {
+              const imageUrl =
+                photo?.url ||
+                photo?.image_url ||
+                photo?.imageUrl ||
+                photo?.file_url ||
+                photo?.src;
+
+              return (
+                <div
+                  className="photo-card"
+                  key={photo?.id || index}
+                >
+                  {imageUrl ? (
+                    <img
+                      src={imageUrl}
+                      alt={`Foto ${index + 1} do paciente`}
+                    />
+                  ) : (
+                    <div className="photo-placeholder">
+                      Foto sem imagem
+                    </div>
                   )}
                 </div>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {tab === 'Registros' && (
-          <div className="table-scroll">
-            <table className="evolution-table">
-              <thead>
-                <tr><th>Data</th><th>Tipo</th><th>Profissional</th><th>Descrição</th></tr>
-              </thead>
-              <tbody>
-                {records.map((r) => (
-                  <tr key={r.date + r.type}>
-                    <td>{r.date}</td>
-                    <td><Badge tone="info">{r.type}</Badge></td>
-                    <td>{r.professional}</td>
-                    <td>{r.description}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+              );
+            })}
           </div>
         )}
-
-        {tab === 'Fotos' && (
-          <div className="evolution-photos">
-            {photos.map((p) => (
-              <div className="evolution-photo-card" key={p.date}>
-                <div className="evolution-photo-card__preview"><ImageIcon size={26} /></div>
-                <div className="evolution-photo-card__footer">
-                  <div>
-                    <strong>{p.date}</strong>
-                    <span>{p.label}</span>
-                  </div>
-                  <button className="btn-icon" aria-label="Baixar foto" onClick={() => downloadPhoto(p.date)}><Download size={14} /></button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      </section>
     </div>
-  )
+  );
 }

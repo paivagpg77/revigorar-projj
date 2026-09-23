@@ -1,51 +1,79 @@
-import { apiClient, withFallback } from './apiClient.js'
-import { PATIENTS, PATIENT_RECORDS } from '../data/mockData.js'
+import { apiClient } from "./apiClient.js";
 
-const TEMPLATES = [
-  { type: 'Fotográfica', text: 'Novo registro fotográfico adicionado.' },
-  { type: 'Prescrição', text: 'Troca de cobertura com hidrogel.' },
-  { type: 'Avaliação', text: 'Avaliação clínica registrada, ferida em processo de cicatrização.' },
-  { type: 'Prescrição', text: 'Limpeza da ferida com SF 0,9%.' },
-  { type: 'Avaliação', text: 'Reavaliação de estomia sem intercorrências.' },
-  { type: 'Fotográfica', text: 'Comparação de imagens realizada.' },
-]
+function normalizeList(response) {
+  if (Array.isArray(response)) {
+    return response;
+  }
 
-/**
- * GET /patients/:patientId/records
- * Histórico completo do paciente (usado no perfil e na aba "Registros").
- * Resposta esperada: Array<{ date, type, professional, description }>
- */
-export function getPatientRecords(patientId) {
-  return withFallback(() => apiClient.get(`/patients/${patientId}/records`), PATIENT_RECORDS)
+  if (Array.isArray(response?.content)) {
+    return response.content;
+  }
+
+  if (Array.isArray(response?.items)) {
+    return response.items;
+  }
+
+  if (Array.isArray(response?.data)) {
+    return response.data;
+  }
+
+  if (Array.isArray(response?.results)) {
+    return response.results;
+  }
+
+  return [];
 }
 
-/**
- * GET /patients/:patientId/evolution-timeline
- * Resposta esperada: Array<{ date, title, description, details, hasPhoto }>
- */
-export function getEvolutionTimeline(patientId) {
-  return withFallback(() => apiClient.get(`/patients/${patientId}/evolution-timeline`), null)
+export async function getEvolutionFeed() {
+  try {
+    const response = await apiClient.get("/evolutions/feed");
+
+    return normalizeList(response);
+  } catch (error) {
+    console.error("Erro ao carregar feed de evoluções:", error);
+
+    return [];
+  }
 }
 
-/**
- * GET /evolutions/feed?type=&page=
- * Feed cronológico entre pacientes (tela "Evoluções" no menu lateral).
- * Resposta esperada: Array<{ id, patient: {id,name}, type, text, date }>
- */
-export function getEvolutionFeed() {
-  return withFallback(
-    () => apiClient.get('/evolutions/feed'),
-    Array.from({ length: 18 }, (_, i) => {
-      const patient = PATIENTS[i % PATIENTS.length]
-      const template = TEMPLATES[i % TEMPLATES.length]
-      const day = 12 - Math.floor(i / 2)
-      return {
-        id: i,
-        patient,
-        type: template.type,
-        text: template.text,
-        date: `${String(Math.max(day, 1)).padStart(2, '0')}/09/2025`,
-      }
-    })
-  )
+export async function getEvolutionTimeline(patientId) {
+  if (!patientId) {
+    return [];
+  }
+
+  try {
+    const response = await apiClient.get(
+      `/patients/${patientId}/evolutions`
+    );
+
+    return normalizeList(response);
+  } catch (error) {
+    console.error(
+      `Erro ao carregar evoluções do paciente ${patientId}:`,
+      error
+    );
+
+    return [];
+  }
+}
+
+export async function getPatientRecords(patientId) {
+  if (!patientId) {
+    return [];
+  }
+
+  try {
+    const response = await apiClient.get(
+      `/patients/${patientId}/records`
+    );
+
+    return normalizeList(response);
+  } catch (error) {
+    console.error(
+      `Erro ao carregar registros do paciente ${patientId}:`,
+      error
+    );
+
+    return [];
+  }
 }
