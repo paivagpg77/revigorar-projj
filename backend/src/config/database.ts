@@ -11,7 +11,11 @@ import { FinancialRecord } from '../models/FinancialRecord';
 import { Appointment } from '../models/Appointment';
 import { StockItem } from '../models/StockItem';
 import { StockMovement } from '../models/StockMovement';
-import { Specialty } from '../models/Specialty';
+import { EstomiaEvaluation } from '../models/EstomiaEvaluation';
+import { LaserSession } from '../models/LaserSession';
+import { PodiatryEvaluation } from '../models/PodiatryEvaluation';
+import { Prescription } from '../models/Prescription';
+import { Institution } from '../models/Institution';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -33,7 +37,11 @@ export const AppDataSource = new DataSource({
     Appointment,
     StockItem,
     StockMovement,
-    Specialty,
+    EstomiaEvaluation,
+    LaserSession,
+    PodiatryEvaluation,
+    Prescription,
+    Institution,
   ],
   migrations: [__dirname + '/../database/migrations/*.ts'],
 });

@@ -1,25 +1,59 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import MainLayout from './layouts/MainLayout';
-import Home from './pages/Home/Home';
-import Login from './pages/Login/Login';
-import Dashboard from './pages/Dashboard/Dashboard';
-import Agenda from './pages/Agenda/Agenda';
-import Financeiro from './pages/Financeiro/Financeiro';
-import Estoque from './pages/Estoque/Estoque';
-import Especialidades from './pages/Especialidades/Especialidades';
-import Pacientes from './pages/Pacientes/Pacientes';
-import Avaliacoes from './pages/Avaliacoes/Avaliacoes';
+import { Routes, Route, Navigate } from 'react-router-dom'
+import AppLayout from './layouts/AppLayout.jsx'
+import Login from './pages/Login/Login.jsx'
+import Register from './pages/Register/Register.jsx'
+import RequireAuth from './routes/RequireAuth.jsx'
+import { isAuthenticated } from './services/authService.js'
+import Dashboard from './pages/Dashboard/Dashboard.jsx'
+import Patients from './pages/Patients/Patients.jsx'
+import PatientProfile from './pages/PatientProfile/PatientProfile.jsx'
+import WoundAssessment from './pages/WoundAssessment/WoundAssessment.jsx'
+import PhotoRegistry from './pages/PhotoRegistry/PhotoRegistry.jsx'
+import Evolution from './pages/Evolution/Evolution.jsx'
+import Prescriptions from './pages/Prescriptions/Prescriptions.jsx'
+import RemoteMonitoring from './pages/RemoteMonitoring/RemoteMonitoring.jsx'
+import Reports from './pages/Reports/Reports.jsx'
+import Settings from './pages/Settings/Settings.jsx'
+import Agenda from './pages/Agenda/Agenda.jsx'
+import Assessments from './pages/Assessments/Assessments.jsx'
+import EvolutionsFeed from './pages/EvolutionsFeed/EvolutionsFeed.jsx'
+import PrescriptionsBoard from './pages/PrescriptionsBoard/PrescriptionsBoard.jsx'
+import Stock from './pages/Stock/Stock.jsx'
+import PhotosList from './pages/PhotosList/PhotosList.jsx'
 
 export default function App() {
- return <BrowserRouter><Routes>
-  <Route element={<MainLayout />}><Route path="/" element={<Home/>}/></Route>
-  <Route path="/login" element={<Login/>}/>
-  <Route path="/dashboard" element={<Dashboard/>}/>
-  <Route path="/pacientes" element={<Pacientes/>}/>
-  <Route path="/agenda" element={<Agenda/>}/>
-  <Route path="/financeiro" element={<Financeiro/>}/>
-  <Route path="/estoque" element={<Estoque/>}/>
-  <Route path="/especialidades" element={<Especialidades/>}/>
-  <Route path="/avaliacoes" element={<Avaliacoes/>}/>
- </Routes></BrowserRouter>
+  return (
+    <Routes>
+      <Route
+        path="/login"
+        element={isAuthenticated() ? <Navigate to="/" replace /> : <Login />}
+      />
+      <Route
+        path="/cadastro"
+        element={isAuthenticated() ? <Navigate to="/" replace /> : <Register />}
+      />
+
+      <Route element={<RequireAuth><AppLayout /></RequireAuth>}>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/pacientes" element={<Patients />} />
+        <Route path="/pacientes/:id" element={<PatientProfile />} />
+        <Route path="/pacientes/:id/avaliacao" element={<WoundAssessment />} />
+        <Route path="/pacientes/:id/fotos" element={<PhotoRegistry />} />
+        <Route path="/pacientes/:id/evolucao" element={<Evolution />} />
+        <Route path="/pacientes/:id/prescricoes" element={<Prescriptions />} />
+        <Route path="/pacientes/:id/monitoramento" element={<RemoteMonitoring />} />
+        <Route path="/agenda" element={<Agenda />} />
+        <Route path="/avaliacoes" element={<Assessments />} />
+        <Route path="/evolucoes" element={<EvolutionsFeed />} />
+        <Route path="/prescricoes" element={<PrescriptionsBoard />} />
+        <Route path="/estoque" element={<Stock />} />
+        <Route path="/fotos" element={<PhotosList />} />
+        <Route path="/relatorios" element={<Reports />} />
+        <Route path="/indicadores" element={<Reports />} />
+        <Route path="/configuracoes" element={<Settings />} />
+      </Route>
+
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  )
 }

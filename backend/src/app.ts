@@ -14,7 +14,8 @@ import patientRoutes from './routes/patient.routes';
 import woundRoutes from './routes/wound.routes';
 import evaluationRoutes from './routes/evaluation.routes';
 import { appointmentRoutes, financialRoutes, stockRoutes } from './routes/business.routes';
-import specialtyRoutes from './routes/specialty.routes';
+import { estomiaRoutes, laserRoutes, podiatryRoutes } from './routes/specialties.routes';
+import { prescriptionRoutes, institutionRoutes, dashboardRoutes, photoRoutes } from './routes/extended.routes';
 
 const app = express();
 
@@ -43,7 +44,16 @@ app.use('/api/evaluations',  authGuard, evaluationRoutes);
 app.use('/api/appointments', authGuard, appointmentRoutes);
 app.use('/api/financial',    authGuard, financialRoutes);
 app.use('/api/stock',        authGuard, stockRoutes);
-app.use('/api/specialties',  authGuard, specialtyRoutes);
+app.use('/api/estomia',      authGuard, estomiaRoutes);
+app.use('/api/laser',        authGuard, laserRoutes);
+app.use('/api/podiatry',      authGuard, podiatryRoutes);
+app.use('/api/prescriptions', authGuard, prescriptionRoutes);
+app.use('/api/institution',   authGuard, institutionRoutes);
+app.use('/api/dashboard',     authGuard, dashboardRoutes);
+app.use('/api/photos',        authGuard, photoRoutes);
+
+// Servir fotos de uploads
+app.use('/uploads', express.static('uploads'));
 
 // ── 404 ────────────────────────────────────
 app.use((_req, res) => {

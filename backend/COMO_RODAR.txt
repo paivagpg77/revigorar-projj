@@ -1,0 +1,10 @@
+REVIGORAR - BACKEND
+
+1. Instale Node.js 18+ e PostgreSQL.
+2. Copie .env.example para .env.
+3. Preencha DB_PASSWORD e confirme os dados do banco.
+4. Rode: npm install
+5. Sincronize o banco se necessário: npm run db:sync
+6. Rode: npm run dev
+7. API: http://localhost:3000
+8. Health check: http://localhost:3000/health

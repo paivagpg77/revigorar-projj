@@ -1,111 +1,109 @@
-import { useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { login, register } from '../../services/api';
-import './Login.css';
+import { useState } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
+import { Eye, EyeOff, Leaf } from 'lucide-react'
+import { useToast } from '../../components/Toast/ToastContext.jsx'
+import { login } from '../../services/authService.js'
+import './Login.css'
 
 export default function Login() {
-  const [params] = useSearchParams();
-  const [tab, setTab] = useState(params.get('tab') === 'register' ? 'register' : 'login');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
+  const navigate = useNavigate()
+  const showToast = useToast()
+  const [showPassword, setShowPassword] = useState(false)
+  const [remember, setRemember] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [form, setForm] = useState({ email: '', password: '' })
 
-  async function handleLogin(e) {
-    e.preventDefault();
-    setError(''); setLoading(true);
-    const fd = new FormData(e.target);
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setSubmitting(true)
     try {
-      await login(fd.get('email'), fd.get('password'));
-      navigate('/dashboard');
-    } catch (err) { setError(err.message); }
-    setLoading(false);
+      await login(form.email, form.password, remember)
+      navigate('/', { replace: true })
+    } catch (err) {
+      showToast(err.message || 'Não foi possível entrar. Verifique suas credenciais.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
-  async function handleRegister(e) {
-    e.preventDefault();
-    setError(''); setLoading(true);
-    const fd = new FormData(e.target);
-    try {
-      await register({
-        full_name: fd.get('full_name'),
-        email: fd.get('email'),
-        password: fd.get('password'),
-        phone: fd.get('phone'),
-        professional_license: fd.get('professional_license'),
-        specialization: fd.get('specialization'),
-      });
-      navigate('/dashboard');
-    } catch (err) { setError(err.message); }
-    setLoading(false);
+  const handleForgotPassword = (e) => {
+    e.preventDefault()
+    if (!form.email.trim()) {
+      showToast('Digite seu e-mail acima para receber o link de redefinição.')
+      return
+    }
+    showToast(`Link de redefinição enviado para ${form.email}.`)
   }
 
   return (
-    <div className="auth-page">
-      <div className="auth-visual">
-        <div className="auth-float af1"><div className="af-lab">Taxa de cicatrização</div><div className="af-val">87.3%</div></div>
-        <div className="auth-float af2"><div className="af-lab">PUSH 3.0</div><div className="af-val" style={{color:'#5EEAD4'}}>Score: 11</div></div>
-        <div className="auth-text">
-          <h2>Onde a evidência clínica encontra a <em>gestão inteligente</em></h2>
-          <p>Prontuário especializado, escalas automatizadas e indicadores de cicatrização.</p>
+    <div className="login">
+      <div className="login__side">
+        <h1>
+          Tecnologia e cuidado em cada etapa do tratamento de estomias e feridas.
+        </h1>
+        <ul className="login__benefits">
+          <li>Mais organização</li>
+          <li>Maior segurança</li>
+          <li>Melhor cuidado</li>
+        </ul>
+        <div className="login__side-brand">
+          <Leaf size={18} strokeWidth={2.4} />
+          REVIGORAR
         </div>
       </div>
 
-      <div className="auth-form-panel">
-        <div className="auth-inner">
-          <div className="brand" style={{marginBottom:32}}>
-            <div className="brand-icon" /><span className="brand-name">REVIGORAR</span>
+      <div className="login__panel">
+        <form className="login__card" onSubmit={handleSubmit}>
+          <div className="login__logo">
+            <span className="login__logo-icon"><Leaf size={22} strokeWidth={2.4} /></span>
+            <strong>REVIGORAR</strong>
+            <small>CUIDADO QUE EVOLUI</small>
           </div>
 
-          <div className="auth-tabs">
-            <button className={tab === 'login' ? 'active' : ''} onClick={() => setTab('login')}>Entrar</button>
-            <button className={tab === 'register' ? 'active' : ''} onClick={() => setTab('register')}>Criar conta</button>
+          <div className="form-field">
+            <label htmlFor="login-email">E-mail ou usuário</label>
+            <input
+              id="login-email"
+              type="text"
+              value={form.email}
+              onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+              required
+            />
           </div>
 
-          {error && <div className="auth-error">{error}</div>}
+          <div className="form-field">
+            <label htmlFor="login-password">Senha</label>
+            <div className="login__password">
+              <input
+                id="login-password"
+                type={showPassword ? 'text' : 'password'}
+                value={form.password}
+                onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+                required
+              />
+              <button type="button" onClick={() => setShowPassword((v) => !v)} aria-label="Mostrar senha">
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </div>
 
-          {tab === 'login' ? (
-            <form onSubmit={handleLogin}>
-              <h1 className="auth-h">Bem-vindo de volta</h1>
-              <p className="auth-sub">Acesse sua plataforma clínica.</p>
-              <label className="field-label">E-mail</label>
-              <input name="email" type="email" className="field-input" placeholder="seu@email.com" required />
-              <label className="field-label">Senha</label>
-              <input name="password" type="password" className="field-input" placeholder="Sua senha" required />
-              <button type="submit" className="btn-auth" disabled={loading}>
-                {loading ? 'Entrando...' : 'Entrar →'}
-              </button>
-            </form>
-          ) : (
-            <form onSubmit={handleRegister}>
-              <h1 className="auth-h">Crie sua conta</h1>
-              <p className="auth-sub">7 dias gratuitos. Sem cartão de crédito.</p>
-              <label className="field-label">Nome completo</label>
-              <input name="full_name" className="field-input" placeholder="Dr(a). Nome Sobrenome" required />
-              <label className="field-label">E-mail profissional</label>
-              <input name="email" type="email" className="field-input" placeholder="seu@email.com" required />
-              <div className="field-row">
-                <div><label className="field-label">Registro</label><input name="professional_license" className="field-input" placeholder="COREN, CRM..." /></div>
-                <div><label className="field-label">Telefone</label><input name="phone" className="field-input" placeholder="(00) 00000-0000" /></div>
-              </div>
-              <label className="field-label">Especialidade</label>
-              <select name="specialization" className="field-input">
-                <option value="">Selecione...</option>
-                <option>Estomaterapia</option>
-                <option>Enfermagem em feridas</option>
-                <option>Laserterapia</option>
-                <option>Podiatria</option>
-                <option>Medicina</option>
-                <option>Outra</option>
-              </select>
-              <label className="field-label">Senha</label>
-              <input name="password" type="password" className="field-input" placeholder="Mínimo 8 caracteres" required />
-              <button type="submit" className="btn-auth" disabled={loading}>
-                {loading ? 'Criando...' : 'Criar conta gratuita →'}
-              </button>
-            </form>
-          )}
-        </div>
+          <div className="login__row">
+            <label className="login__remember">
+              <input type="checkbox" checked={remember} onChange={() => setRemember((v) => !v)} />
+              Lembrar de mim
+            </label>
+            <a href="#" onClick={handleForgotPassword}>Esqueceu sua senha?</a>
+          </div>
+
+          <button type="submit" className="btn btn-primary login__submit" disabled={submitting}>
+            {submitting ? 'Entrando...' : 'Entrar'}
+          </button>
+
+          <p className="login__footer">
+            Ainda não tem uma conta? <Link to="/cadastro">Criar nova conta</Link>
+          </p>
+        </form>
       </div>
     </div>
-  );
+  )
 }

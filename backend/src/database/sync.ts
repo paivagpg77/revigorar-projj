@@ -12,7 +12,8 @@ async function sync() {
     await AppDataSource.destroy();
     process.exit(0);
   } catch (err) {
-    logger.error('✗ Falha ao sincronizar banco:', err);
+    logger.error('✗ Falha ao sincronizar banco:');
+    console.error(err);
     process.exit(1);
   }
 }

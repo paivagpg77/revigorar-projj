@@ -61,9 +61,6 @@ export class User {
   @OneToMany('StockItem', 'user')
   stock_items: any[];
 
-  @OneToMany('Specialty', 'user')
-  specialties: any[];
-
   async setPassword(plain: string): Promise<void> {
     this.password_hash = await bcrypt.hash(plain, 12);
   }

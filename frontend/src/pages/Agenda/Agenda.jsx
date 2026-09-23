@@ -1,28 +1,147 @@
-import { useEffect, useState } from 'react';
-import { Plus, CalendarDays, Trash2, CheckCircle2 } from 'lucide-react';
-import { AppShell } from "../../components/AppShell/AppShell";
-import { getAppointments, createAppointment, updateAppointment, deleteAppointment, getPatients } from '../../services/api';
-import '../Module.css';
+import { useEffect, useState } from 'react'
+import { Plus, Check, X, Trash2 } from 'lucide-react'
+import Badge from '../../components/Badge/Badge.jsx'
+import { listPatients } from '../../services/patientsService.js'
+import { getSchedule, createAppointment, updateAppointmentStatus, deleteAppointment } from '../../services/agendaService.js'
+import './Agenda.css'
 
-const fmtDate = v => new Date(v).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
-const statusLabel = {scheduled:'Agendado',confirmed:'Confirmado',completed:'Concluído',cancelled:'Cancelado',no_show:'Não compareceu'};
+const DAYS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
 
-export default function Agenda(){
- const [items,setItems]=useState([]),[patients,setPatients]=useState([]),[show,setShow]=useState(false),[loading,setLoading]=useState(true),[error,setError]=useState('');
- async function load(){setLoading(true);try{const [a,p]=await Promise.all([getAppointments(),getPatients('limit=100')]);setItems(a);setPatients(p.data||[])}catch(e){setError(e.message)}finally{setLoading(false)}}
- useEffect(()=>{load()},[]);
- async function submit(e){e.preventDefault();setError('');const f=new FormData(e.target);try{await createAppointment({patient_id:f.get('patient_id'),scheduled_at:new Date(f.get('scheduled_at')).toISOString(),duration_min:Number(f.get('duration_min')||60),location_type:f.get('location_type'),procedure_type:f.get('procedure_type'),notes:f.get('notes')});setShow(false);load()}catch(e){setError(e.message)}}
- async function cancel(id){if(!confirm('Cancelar este atendimento?'))return;try{await updateAppointment(id,{status:'cancelled'});load()}catch(e){setError(e.message)}}
- async function remove(id){if(!confirm('Excluir este agendamento?'))return;try{await deleteAppointment(id);load()}catch(e){setError(e.message)}}
- return <AppShell title="Agenda" subtitle="Organize consultas, retornos e atendimentos domiciliares.">
-  <div className="page-toolbar"><div className="module-summary"><CalendarDays size={19}/><span>{items.length} atendimento(s)</span></div><button className="action-btn" onClick={()=>setShow(true)}><Plus size={17}/> Novo atendimento</button></div>
-  {error&&<div className="toast-error">{error}</div>}
-  <div className="data-card">{loading?<div className="empty-module">Carregando agenda...</div>:items.length===0?<div className="empty-module"><CalendarDays size={34}/><h3>Agenda livre</h3><p>Cadastre o primeiro atendimento para começar.</p></div>:
-  <table className="data-table"><thead><tr><th>Data e hora</th><th>Paciente</th><th>Procedimento</th><th>Local</th><th>Status</th><th></th></tr></thead><tbody>{items.map(a=><tr key={a.id}><td><b>{fmtDate(a.scheduled_at)}</b><div className="muted">{a.duration_min} min</div></td><td>{a.patient?.name||a.patient_id}</td><td>{a.procedure_type||'—'}</td><td>{a.location_type==='home'?'Domiciliar':a.location_type==='telehealth'?'Teleatendimento':'Clínica'}</td><td><span className={`pill ${a.status==='cancelled'?'danger':''}`}>{statusLabel[a.status]||a.status}</span></td><td><div className="row-actions">{a.status!=='cancelled'&&<button className="mini-btn" title="Cancelar" onClick={()=>cancel(a.id)}><CheckCircle2 size={15}/></button>}<button className="mini-btn danger-mini" onClick={()=>remove(a.id)}><Trash2 size={15}/></button></div></td></tr>)}</tbody></table>}</div>
-  {show&&<div className="modal-backdrop"><form className="modal-card" onSubmit={submit}><div className="modal-head"><h2>Novo atendimento</h2><button type="button" onClick={()=>setShow(false)}>×</button></div><div className="form-grid">
-   <div className="form-field full"><label>Paciente</label><select name="patient_id" required><option value="">Selecione...</option>{patients.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
-   <div className="form-field"><label>Data e hora</label><input name="scheduled_at" type="datetime-local" required/></div><div className="form-field"><label>Duração (min)</label><input name="duration_min" type="number" defaultValue="60" min="15"/></div>
-   <div className="form-field"><label>Local</label><select name="location_type"><option value="clinic">Clínica</option><option value="home">Domiciliar</option><option value="telehealth">Teleatendimento</option></select></div><div className="form-field"><label>Procedimento</label><select name="procedure_type"><option value="evaluation">Avaliação</option><option value="dressing_change">Troca de curativo</option><option value="laser">Laserterapia</option><option value="stomia">Estomia</option><option value="follow_up">Retorno</option></select></div>
-   <div className="form-field full"><label>Observações</label><textarea name="notes" placeholder="Observações do atendimento..."/></div></div><div className="form-actions"><button type="button" className="ghost-btn" onClick={()=>setShow(false)}>Cancelar</button><button className="action-btn">Salvar atendimento</button></div></form></div>}
- </AppShell>
+export default function Agenda() {
+  const [activeDay, setActiveDay] = useState('Seg')
+  const [schedule, setSchedule] = useState({ Seg: [], Ter: [], Qua: [], Qui: [], Sex: [], Sáb: [], Dom: [] })
+  const [patients, setPatients] = useState([])
+  const [showForm, setShowForm] = useState(false)
+  const [form, setForm] = useState({ name: '', time: '', type: 'Ferida' })
+
+  useEffect(() => {
+    let active = true
+    getSchedule().then((data) => { if (active) setSchedule(data) })
+    listPatients().then((data) => {
+      if (active) {
+        setPatients(data)
+        setForm((f) => ({ ...f, name: f.name || data[0]?.name || '' }))
+      }
+    })
+    return () => { active = false }
+  }, [])
+
+  const dayItems = schedule[activeDay] || []
+
+  const updateStatus = async (appointmentId, status) => {
+    await updateAppointmentStatus(appointmentId, status)
+    setSchedule((s) => ({
+      ...s,
+      [activeDay]: s[activeDay].map((item) => (item.id === appointmentId ? { ...item, status } : item)),
+    }))
+  }
+
+  const removeItem = async (appointmentId) => {
+    await deleteAppointment(appointmentId)
+    setSchedule((s) => ({
+      ...s,
+      [activeDay]: s[activeDay].filter((item) => item.id !== appointmentId),
+    }))
+  }
+
+  const addAppointment = async (e) => {
+    e.preventDefault()
+    if (!form.time) return
+    const created = await createAppointment(activeDay, { name: form.name, time: form.time, type: form.type })
+    setSchedule((s) => ({
+      ...s,
+      [activeDay]: [...s[activeDay], created],
+    }))
+    setForm({ name: patients[0]?.name || '', time: '', type: 'Ferida' })
+    setShowForm(false)
+  }
+
+  return (
+    <div className="page">
+      <div className="page-header">
+        <div>
+          <h1>Agenda</h1>
+          <p>Atendimentos agendados ao longo da semana</p>
+        </div>
+        <button className="btn btn-primary" onClick={() => setShowForm((v) => !v)}>
+          <Plus size={15} /> Novo agendamento
+        </button>
+      </div>
+
+      <div className="agenda-days">
+        {DAYS.map((day) => (
+          <button
+            key={day}
+            className={`agenda-days__item ${activeDay === day ? 'is-active' : ''}`}
+            onClick={() => setActiveDay(day)}
+          >
+            {day}
+            <span>{schedule[day].length}</span>
+          </button>
+        ))}
+      </div>
+
+      {showForm && (
+        <form className="panel agenda-form" onSubmit={addAppointment}>
+          <div className="form-field">
+            <label>Paciente</label>
+            <select value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}>
+              {patients.map((p) => <option key={p.id}>{p.name}</option>)}
+            </select>
+          </div>
+          <div className="form-field">
+            <label>Horário</label>
+            <input type="time" value={form.time} onChange={(e) => setForm((f) => ({ ...f, time: e.target.value }))} required />
+          </div>
+          <div className="form-field">
+            <label>Tipo</label>
+            <select value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}>
+              <option>Ferida</option>
+              <option>Estomia</option>
+            </select>
+          </div>
+          <div className="agenda-form__actions">
+            <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>Cancelar</button>
+            <button type="submit" className="btn btn-primary">Adicionar a {activeDay}</button>
+          </div>
+        </form>
+      )}
+
+      <div className="panel">
+        <h3 className="panel-title">{activeDay === 'Sáb' || activeDay === 'Dom' ? `Fim de semana — ${activeDay}` : `Atendimentos de ${activeDay}`}</h3>
+
+        {dayItems.length === 0 ? (
+          <p className="agenda-empty">Nenhum atendimento agendado para este dia.</p>
+        ) : (
+          <ul className="agenda-list">
+            {dayItems.map((item) => (
+              <li key={item.id}>
+                <span className="agenda-list__time">{item.time}</span>
+                <div className="agenda-list__body">
+                  <strong>{item.name}</strong>
+                  <span>{item.type}</span>
+                </div>
+                <Badge tone={item.status === 'Confirmado' ? 'success' : item.status === 'Cancelado' ? 'danger' : 'warning'}>{item.status}</Badge>
+                <div className="agenda-list__actions">
+                  {item.status !== 'Confirmado' && (
+                    <button className="btn-icon" aria-label="Confirmar" onClick={() => updateStatus(item.id, 'Confirmado')}>
+                      <Check size={14} />
+                    </button>
+                  )}
+                  {item.status !== 'Cancelado' && (
+                    <button className="btn-icon" aria-label="Cancelar" onClick={() => updateStatus(item.id, 'Cancelado')}>
+                      <X size={14} />
+                    </button>
+                  )}
+                  <button className="btn-icon" aria-label="Remover" onClick={() => removeItem(item.id)}>
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  )
 }
