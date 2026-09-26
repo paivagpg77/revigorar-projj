@@ -6,86 +6,30 @@ import { env } from './config/env';
 import { AppDataSource } from './config/database';
 import logger from './utils/logger';
 import { errorHandler } from './middleware/errorHandler';
-import { authGuard } from './middleware/auth';
-
-// Routes
-import authRoutes from './routes/auth.routes';
-import patientRoutes from './routes/patient.routes';
-import woundRoutes from './routes/wound.routes';
-import evaluationRoutes from './routes/evaluation.routes';
-import { appointmentRoutes, financialRoutes, stockRoutes } from './routes/business.routes';
-import { estomiaRoutes, laserRoutes, podiatryRoutes } from './routes/specialties.routes';
-import { prescriptionRoutes, institutionRoutes, dashboardRoutes, photoRoutes } from './routes/extended.routes';
+import api from './routes';
 
 const app = express();
 
-// ── Middleware ──────────────────────────────
 app.use(helmet());
 app.use(cors({ origin: env.corsOrigin, credentials: true }));
 app.use(express.json({ limit: '10mb' }));
-
-app.use((req, _res, next) => {
-  logger.info(`${req.method} ${req.path}`);
-  next();
-});
-
-// ── Health check ───────────────────────────
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', ts: new Date().toISOString(), env: env.nodeEnv });
-});
-
-// ── Public routes ──────────────────────────
-app.use('/api/auth', authRoutes);
-
-// ── Protected routes ───────────────────────
-app.use('/api/patients',     authGuard, patientRoutes);
-app.use('/api/wounds',       authGuard, woundRoutes);
-app.use('/api/evaluations',  authGuard, evaluationRoutes);
-app.use('/api/appointments', authGuard, appointmentRoutes);
-app.use('/api/financial',    authGuard, financialRoutes);
-app.use('/api/stock',        authGuard, stockRoutes);
-app.use('/api/estomia',      authGuard, estomiaRoutes);
-app.use('/api/laser',        authGuard, laserRoutes);
-app.use('/api/podiatry',      authGuard, podiatryRoutes);
-app.use('/api/prescriptions', authGuard, prescriptionRoutes);
-app.use('/api/institution',   authGuard, institutionRoutes);
-app.use('/api/dashboard',     authGuard, dashboardRoutes);
-app.use('/api/photos',        authGuard, photoRoutes);
-
-// Servir fotos de uploads
 app.use('/uploads', express.static('uploads'));
 
-// ── 404 ────────────────────────────────────
-app.use((_req, res) => {
-  res.status(404).json({ status: 'error', message: 'Rota não encontrada' });
-});
-
-// ── Error handler ──────────────────────────
+app.get('/health', (_req, res) => res.json({ status: 'ok', ts: new Date().toISOString() }));
+app.use('/api', api);
+app.use((_req, res) => res.status(404).json({ message: 'Rota não encontrada' }));
 app.use(errorHandler);
 
-// ── Start ──────────────────────────────────
 async function bootstrap() {
   try {
     await AppDataSource.initialize();
     logger.info('✓ PostgreSQL conectado');
-
     app.listen(env.port, () => {
-      logger.info(`
-  ╔══════════════════════════════════════╗
-  ║   REVIGORAR  ·  Backend API         ║
-  ║   http://localhost:${String(env.port).padEnd(19)}║
-  ║   ${env.nodeEnv.padEnd(35)}║
-  ╚══════════════════════════════════════╝`);
+      logger.info(`✓ REVIGORAR Backend rodando em http://localhost:${env.port}`);
+      logger.info(`  ${AppDataSource.entityMetadatas.length} tabelas sincronizadas`);
     });
-  } catch (err) {
-    logger.error('✗ Falha ao iniciar:', err);
-    process.exit(1);
-  }
+  } catch (err) { logger.error('✗ Falha:', err); process.exit(1); }
 }
 
-process.on('SIGTERM', () => { logger.info('SIGTERM'); process.exit(0); });
-process.on('SIGINT',  () => { logger.info('SIGINT');  process.exit(0); });
-
 bootstrap();
-
 export default app;

@@ -5,17 +5,9 @@ import logger from '../utils/logger';
 async function sync() {
   try {
     await AppDataSource.initialize();
-    logger.info('✓ Banco sincronizado com sucesso');
-    logger.info('  Tabelas criadas:');
-    const tables = AppDataSource.entityMetadatas.map(e => e.tableName);
-    tables.forEach(t => logger.info(`    - ${t}`));
+    logger.info('✓ Banco sincronizado');
+    AppDataSource.entityMetadatas.forEach(e => logger.info(`  - ${e.tableName}`));
     await AppDataSource.destroy();
-    process.exit(0);
-  } catch (err) {
-    logger.error('✗ Falha ao sincronizar banco:');
-    console.error(err);
-    process.exit(1);
-  }
+  } catch (err) { console.error('✗ Erro:', err); process.exit(1); }
 }
-
 sync();

@@ -3,35 +3,18 @@ import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
 import { AppError } from '../utils/AppError';
 
-export interface AuthPayload {
-  userId: string;
-  email: string;
-}
-
-declare global {
-  namespace Express {
-    interface Request {
-      auth?: AuthPayload;
-    }
-  }
-}
+export interface AuthPayload { userId: string; email: string; }
+declare global { namespace Express { interface Request { auth?: AuthPayload; } } }
 
 export function authGuard(req: Request, _res: Response, next: NextFunction) {
-  const header = req.headers.authorization;
-  if (!header || !header.startsWith('Bearer ')) {
-    return next(AppError.unauthorized('Token não fornecido'));
-  }
-
-  const token = header.slice(7);
+  const h = req.headers.authorization;
+  if (!h?.startsWith('Bearer ')) return next(AppError.unauthorized('Token não fornecido'));
   try {
-    const decoded = jwt.verify(token, env.jwt.secret) as AuthPayload;
-    req.auth = decoded;
+    req.auth = jwt.verify(h.slice(7), env.jwt.secret) as AuthPayload;
     next();
-  } catch {
-    next(AppError.unauthorized('Token inválido ou expirado'));
-  }
+  } catch { next(AppError.unauthorized('Token inválido')); }
 }
 
-export function signToken(payload: AuthPayload): string {
-  return jwt.sign(payload, env.jwt.secret, { expiresIn: env.jwt.expiresIn } as any);
+export function signToken(p: AuthPayload): string {
+  return jwt.sign(p, env.jwt.secret, { expiresIn: env.jwt.expiresIn } as any);
 }
