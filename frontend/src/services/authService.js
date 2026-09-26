@@ -1,112 +1,61 @@
-import {
-  apiClient,
-  isApiConfigured,
-  setToken,
-  clearToken,
-  getToken,
-  unwrapData
-} from './apiClient.js'
+import { apiClient, isApiConfigured, setToken, clearToken, getToken } from './apiClient.js'
+import { CURRENT_USER } from '../data/mockData.js'
 
-
-export async function login(
-  email,
-  password,
-  remember = false
-) {
-
+/**
+ * Endpoint esperado: POST /auth/login
+ * Body:   { email, password }
+ * Resposta esperada: { token: string, user: { name, role, initials } }
+ * `remember`: se true, mantém a sessão salva entre execuções do sistema
+ * (localStorage); caso contrário, a sessão vale só para esta aba/execução
+ * (sessionStorage) e um novo login será pedido na próxima vez.
+ */
+export async function login(email, password, remember = false) {
   if (!isApiConfigured()) {
-    throw new Error(
-      'API não configurada.'
-    )
+    // Sem back-end configurado: aceita qualquer credencial, como no protótipo.
+    setToken('demo-token', remember)
+    return { user: CURRENT_USER }
   }
 
-  const response =
-    await apiClient.post(
-      '/auth/login',
-      {
-        email: email.trim(),
-        password
-      }
-    )
-
-  const data =
-    unwrapData(response)
-
-  if (data?.token) {
-    setToken(
-      data.token,
-      remember
-    )
-  }
-
+  const data = await apiClient.post('/auth/login', { email, password })
+  if (data?.token) setToken(data.token, remember)
   return data
 }
-
-
-export async function register(
-  name,
-  email,
-  password
-) {
-
-  if (!isApiConfigured()) {
-    throw new Error(
-      'API não configurada.'
-    )
-  }
-
-  const response =
-    await apiClient.post(
-      '/auth/register',
-      {
-        full_name:
-          name.trim(),
-
-        email:
-          email.trim(),
-
-        password
-      }
-    )
-
-  const data =
-    unwrapData(response)
-
-  if (data?.token) {
-    setToken(
-      data.token,
-      false
-    )
-  }
-
-  return data
-}
-
 
 export function logout() {
   clearToken()
 }
 
-
 export function isAuthenticated() {
-  return Boolean(
-    getToken()
-  )
+  return Boolean(getToken())
 }
 
-
-export async function getCurrentUser() {
-
+/**
+ * Endpoint esperado: POST /auth/register
+ * Body:   { name, email, password }
+ * Resposta esperada: { token: string, user: { name, role, initials } }
+ */
+export async function register(name, email, password) {
   if (!isApiConfigured()) {
-    throw new Error(
-      'API não configurada.'
-    )
+    // Sem back-end configurado: cria a conta localmente, como no protótipo,
+    // e já autentica o usuário.
+    setToken('demo-token', false)
+    return { user: { name, role: 'Enfermeira', initials: name.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase() } }
   }
 
-  const response =
-    await apiClient.get(
-      '/auth/profile'
-    )
+  const data = await apiClient.post('/auth/register', { name, email, password })
+  if (data?.token) setToken(data.token, false)
+  return data
+}
 
-  return unwrapData(response)
+/**
+ * Endpoint esperado: GET /auth/me
+ * Resposta esperada: { name, role, initials }
+ */
+export async function getCurrentUser() {
+  if (!isApiConfigured()) return CURRENT_USER
+  try {
+    return await apiClient.get('/auth/me')
+  } catch {
+    return CURRENT_USER
+  }
 }

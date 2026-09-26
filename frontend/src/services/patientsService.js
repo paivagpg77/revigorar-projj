@@ -1,79 +1,48 @@
-import { apiClient } from './apiClient.js'
+import { apiClient, withFallback } from './apiClient.js'
+import { PATIENTS } from '../data/mockData.js'
 
-
-export async function listPatients(
-  params = {}
-) {
-  const query = new URLSearchParams()
-
-  if (params.search) {
-    query.set(
-      'search',
-      params.search
-    )
-  }
-
-  if (params.status) {
-    query.set(
-      'status',
-      params.status
-    )
-  }
-
-  if (params.page) {
-    query.set(
-      'page',
-      params.page
-    )
-  }
-
-  if (params.limit) {
-    query.set(
-      'limit',
-      params.limit
-    )
-  }
-
-  const queryString =
-    query.toString()
-
-  const endpoint =
-    queryString
-      ? `/patients?${queryString}`
-      : '/patients'
-
-  return apiClient.get(endpoint)
+/**
+ * GET /patients
+ * Resposta esperada: Array<{ id, name, age, type, status, lastEval }>
+ */
+export function listPatients() {
+  return withFallback(() => apiClient.get('/patients'), PATIENTS)
 }
 
-
+/**
+ * GET /patients/:id
+ * Resposta esperada: { id, name, age, type, status, lastEval, ... }
+ */
 export function getPatient(id) {
-  return apiClient.get(
-    `/patients/${id}`
+  return withFallback(
+    () => apiClient.get(`/patients/${id}`),
+    PATIENTS.find((p) => String(p.id) === String(id)) || PATIENTS[0]
   )
 }
 
-
+/**
+ * POST /patients
+ * Body: { name, age, type }
+ * Resposta esperada: paciente criado, com id gerado pelo backend
+ */
 export function createPatient(data) {
-  return apiClient.post(
-    '/patients',
-    data
+  return withFallback(
+    () => apiClient.post('/patients', data),
+    { id: Date.now(), status: 'Ativo', lastEval: '—', ...data }
   )
 }
 
-
-export function updatePatient(
-  id,
-  data
-) {
-  return apiClient.put(
-    `/patients/${id}`,
-    data
-  )
+/**
+ * PUT /patients/:id
+ * Body: campos a atualizar
+ */
+export function updatePatient(id, data) {
+  return withFallback(() => apiClient.put(`/patients/${id}`, data), { id, ...data })
 }
 
-
+/**
+ * DELETE /patients/:id
+ */
 export function deletePatient(id) {
-  return apiClient.delete(
-    `/patients/${id}`
-  )
+  return withFallback(() => apiClient.delete(`/patients/${id}`), null)
 }

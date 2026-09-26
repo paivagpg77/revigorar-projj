@@ -1,81 +1,66 @@
-// =====================================================
-// DADOS TEMPORÁRIOS DO FRONTEND
-// =====================================================
-// Os dados reais devem vir do Backend/PostgreSQL.
-// Este arquivo NÃO contém mais pacientes fictícios.
-// =====================================================
-
-
-// Usuário padrão vazio.
-// O usuário real deve ser carregado pelo authService.js.
 export const CURRENT_USER = {
-  name: '',
-  role: '',
-  initials: '',
+  name: 'Ana Silva',
+  role: 'Enfermeira',
+  initials: 'AS',
 }
 
-
-// Pacientes
-// Os pacientes reais devem vir de:
-// GET /patients
-export const PATIENTS = []
-
-
-// Próximos atendimentos
-// Os dados reais devem vir do Backend.
-export const UPCOMING = []
-
-
-// Dados do gráfico semanal.
-// Enquanto a API não retornar dados, tudo fica em zero.
-export const WEEKLY_SERIES = [
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0
+export const PATIENTS = [
+  { id: 1, name: 'Maria Santos', age: 67, birthDate: '1958-03-14', gender: 'Feminino', cpf: '123.456.789-00', phone: '(11) 98765-4321', type: 'Ferida', status: 'Ativo', lastEval: '12/09/2025', selfResponsible: false, responsibleName: 'João Silva (Filho)' },
+  { id: 2, name: 'João Almeida', age: 82, birthDate: '1943-06-02', gender: 'Masculino', cpf: '234.567.890-11', phone: '(11) 97654-3210', type: 'Estomia', status: 'Ativo', lastEval: '11/09/2025', selfResponsible: false, responsibleName: 'Marta Almeida (Filha)' },
+  { id: 3, name: 'Carla Souza', age: 54, birthDate: '1971-11-20', gender: 'Feminino', cpf: '345.678.901-22', phone: '(11) 96543-2109', type: 'Ferida', status: 'Ativo', lastEval: '10/09/2025', selfResponsible: true, responsibleName: '' },
+  { id: 4, name: 'Antônio Lima', age: 76, birthDate: '1949-01-09', gender: 'Masculino', cpf: '456.789.012-33', phone: '(11) 95432-1098', type: 'Estomia', status: 'Ativo', lastEval: '09/09/2025', selfResponsible: false, responsibleName: 'Paula Lima (Esposa)' },
+  { id: 5, name: 'Beatriz Rocha', age: 68, birthDate: '1957-08-25', gender: 'Feminino', cpf: '567.890.123-44', phone: '(11) 94321-0987', type: 'Ferida', status: 'Ativo', lastEval: '08/09/2025', selfResponsible: true, responsibleName: '' },
+  { id: 6, name: 'Roberto Dias', age: 71, birthDate: '1954-04-30', gender: 'Masculino', cpf: '678.901.234-55', phone: '(11) 93210-9876', type: 'Estomia', status: 'Ativo', lastEval: '07/09/2025', selfResponsible: false, responsibleName: 'Camila Dias (Filha)' },
+  { id: 7, name: 'Luciana Alves', age: 59, birthDate: '1966-12-05', gender: 'Feminino', cpf: '789.012.345-66', phone: '(11) 92109-8765', type: 'Ferida', status: 'Ativo', lastEval: '06/09/2025', selfResponsible: true, responsibleName: '' },
 ]
 
-
-export const WEEKDAYS = [
-  'Seg',
-  'Ter',
-  'Qua',
-  'Qui',
-  'Sex',
-  'Sáb',
-  'Dom'
+export const UPCOMING = [
+  { name: 'Maria Santos', detail: 'Ferida | 09:00', status: 'Confirmado' },
+  { name: 'João Almeida', detail: 'Estomia | 10:30', status: 'Confirmado' },
+  { name: 'Carla Souza', detail: 'Ferida | 14:00', status: 'Pendente' },
 ]
 
+export const WEEKLY_SERIES = [30, 34, 32, 38, 41, 39, 48]
+export const WEEKDAYS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
 
-// Distribuição de pacientes/feridas.
-// Os dados reais devem vir da API.
-export const DISTRIBUTION = []
+export const DISTRIBUTION = [
+  { label: 'Feridas', value: 45, color: 'var(--color-primary)' },
+  { label: 'Estomias', value: 30, color: 'var(--color-primary-light)' },
+  { label: 'Outros', value: 25, color: 'var(--color-accent-soft)' },
+]
 
+export const PATIENT_DOCUMENTS = [
+  { name: 'Termo de consentimento.pdf', date: '02/08/2025', size: '210 KB' },
+  { name: 'Laudo fotográfico - agosto.pdf', date: '28/08/2025', size: '1,4 MB' },
+  { name: 'Receituário - hidrogel.pdf', date: '05/09/2025', size: '96 KB' },
+  { name: 'Encaminhamento médico.pdf', date: '10/09/2025', size: '150 KB' },
+]
 
-// Documentos do paciente.
-// Os dados reais devem vir do Backend.
-export const PATIENT_DOCUMENTS = []
+export const PATIENT_RECORDS = [
+  { date: '12/09/2025', type: 'Avaliação clínica', professional: 'Ana Silva', description: 'Avaliação de ferida em membro inferior direito.' },
+  { date: '05/09/2025', type: 'Evolução fotográfica', professional: 'Ana Silva', description: 'Registro fotográfico de acompanhamento.' },
+  { date: '28/08/2025', type: 'Prescrição', professional: 'Ana Silva', description: 'Troca de cobertura com hidrogel.' },
+  { date: '20/08/2025', type: 'Avaliação clínica', professional: 'Fernanda Costa', description: 'Avaliação inicial de estomia.' },
+]
 
+export const DRESSING_CATALOG = [
+  { name: 'Hidrogel', indication: 'Feridas com tecido necrótico ou esfacelo, pouco exsudativas.', frequency: 'Troca a cada 24–72h' },
+  { name: 'Espuma de poliuretano', indication: 'Feridas com exsudato moderado a intenso.', frequency: 'Troca a cada 3–7 dias' },
+  { name: 'Alginato de cálcio', indication: 'Feridas altamente exsudativas ou com sangramento leve.', frequency: 'Troca a cada 1–3 dias' },
+  { name: 'Filme transparente', indication: 'Proteção de pele íntegra ou feridas superficiais.', frequency: 'Troca a cada 5–7 dias' },
+  { name: 'Carvão ativado com prata', indication: 'Feridas com odor e sinais de infecção.', frequency: 'Troca a cada 2–3 dias' },
+]
 
-// Histórico/prontuário do paciente.
-// Os dados reais devem vir do Backend.
-export const PATIENT_RECORDS = []
+export const SYSTEM_USERS = [
+  { name: 'Ana Silva', email: 'ana.silva@revigorar.com', role: 'Enfermeira', status: 'Ativo' },
+  { name: 'Fernanda Costa', email: 'fernanda.costa@revigorar.com', role: 'Estomaterapeuta', status: 'Ativo' },
+  { name: 'Lucas Almeida', email: 'lucas.almeida@revigorar.com', role: 'Administrador', status: 'Ativo' },
+  { name: 'Rafael Martins', email: 'rafael.martins@revigorar.com', role: 'Suporte', status: 'Inativo' },
+]
 
-
-// Catálogo de coberturas.
-// Mantido vazio para não exibir dados fictícios.
-// Depois podemos conectar ao estoque/produtos do Backend.
-export const DRESSING_CATALOG = []
-
-
-// Usuários do sistema.
-// Os usuários reais devem vir do Backend.
-export const SYSTEM_USERS = []
-
-
-// Integrações.
-// Mantido vazio até as integrações serem carregadas pelo Backend.
-export const INTEGRATIONS = []
+export const INTEGRATIONS = [
+  { name: 'WhatsApp Business API', description: 'Envio de notificações e lembretes por WhatsApp.', enabled: true },
+  { name: 'E-mail transacional', description: 'Envio de relatórios e confirmações por e-mail.', enabled: true },
+  { name: 'Backup automático na nuvem', description: 'Cópia de segurança diária dos dados do sistema.', enabled: false },
+  { name: 'Assinatura digital de documentos', description: 'Assinatura eletrônica de laudos e termos.', enabled: false },
+]

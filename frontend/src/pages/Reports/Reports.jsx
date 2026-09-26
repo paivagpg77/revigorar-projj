@@ -5,6 +5,7 @@ import DonutChart from '../../components/DonutChart/DonutChart.jsx'
 import { useToast } from '../../components/Toast/ToastContext.jsx'
 import { listReports, getWeekdays, getDistribution } from '../../services/reportsService.js'
 import { listPatients } from '../../services/patientsService.js'
+import { exportTableToPDF } from '../../utils/exportPdf.js'
 import './Reports.css'
 
 export default function Reports() {
@@ -33,18 +34,14 @@ export default function Reports() {
   const report = reports[active] || { series: [], label: '' }
 
   const exportReport = () => {
-    const rows = [['Dia', 'Valor'], ...weekdays.map((day, i) => [day, report.series[i]])]
-    const csv = rows.map((r) => r.join(';')).join('\n')
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `${active.toLowerCase().replace(/\s+/g, '-')}.csv`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
-    showToast(`Relatório "${active}" exportado.`)
+    exportTableToPDF({
+      title: 'Relatórios e indicadores',
+      subtitle: `${active} · últimos 7 dias`,
+      columns: ['Dia', 'Valor'],
+      rows: weekdays.map((day, i) => [day, report.series[i]]),
+      filename: active.toLowerCase().replace(/\s+/g, '-'),
+    })
+    showToast(`Relatório "${active}" exportado em PDF.`)
   }
 
   return (

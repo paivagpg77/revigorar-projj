@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import {
   Home, Users, Calendar, ClipboardCheck, Activity, FileText,
-  Package, Image, BarChart2, TrendingUp, Settings, PanelLeftClose, PanelLeft,
+  Package, Image, BarChart2, Settings, PanelLeftClose, PanelLeft,
   Leaf,
 } from 'lucide-react'
 import { useState } from 'react'
@@ -17,7 +17,6 @@ const NAV = [
   { label: 'Estoque', to: '/estoque', icon: Package },
   { label: 'Fotos', to: '/fotos', icon: Image },
   { label: 'Relatórios', to: '/relatorios', icon: BarChart2 },
-  { label: 'Indicadores', to: '/indicadores', icon: TrendingUp },
   { label: 'Configurações', to: '/configuracoes', icon: Settings },
 ]
 
