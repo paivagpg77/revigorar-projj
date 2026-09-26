@@ -1,10 +1,16 @@
-REVIGORAR - BACKEND
+REVIGORAR BACKEND
 
-1. Instale Node.js 18+ e PostgreSQL.
-2. Copie .env.example para .env.
-3. Preencha DB_PASSWORD e confirme os dados do banco.
-4. Rode: npm install
-5. Sincronize o banco se necessário: npm run db:sync
-6. Rode: npm run dev
-7. API: http://localhost:3000
-8. Health check: http://localhost:3000/health
+1. Abra o terminal nesta pasta.
+2. Crie o arquivo .env a partir de .env.example e informe os dados do PostgreSQL.
+3. Instale as dependências:
+   npm install
+4. Sincronize o banco:
+   npm run db:sync
+5. Inicie em desenvolvimento:
+   npm run dev
+
+API: http://localhost:3000
+Health: http://localhost:3000/health
+Uploads: http://localhost:3000/uploads/<arquivo>
+
+O backend não cria pacientes, evoluções ou fotos fictícios. Os dados são separados pelo user_id do token JWT.

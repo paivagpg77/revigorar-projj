@@ -11,6 +11,10 @@ import { env } from '../config/env';
 const r = <T extends Function>(entity: T) => AppDataSource.getRepository<InstanceType<any>>(entity as any);
 const uid = (req: Request) => req.auth!.userId;
 
+function isUuid(value: string) { return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value); }
+
+function assertUuid(value: string | undefined) { if (!value || !isUuid(value)) throw AppError.badRequest('ID inválido'); }
+
 function initials(name: string) {
   return name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase();
 }
@@ -26,7 +30,7 @@ function calcAge(bd: Date | string | null): number {
 // ══════════════════════════════════════════════════════
 export async function authRegister(req: Request, res: Response, next: NextFunction) {
   try {
-    const { name, full_name, email, password } = req.body;
+    const { name, full_name, email, password, specialization } = req.body;
     const finalName = full_name || name;
     if (!finalName || !email || !password) throw AppError.badRequest('Nome, e-mail e senha obrigatórios');
 
@@ -34,8 +38,9 @@ export async function authRegister(req: Request, res: Response, next: NextFuncti
     if (exists) throw AppError.conflict('E-mail já cadastrado');
 
     const u = new User();
-    u.full_name = finalName;
+    u.full_name = finalName.trim();
     u.email = email.toLowerCase().trim();
+    u.specialization = specialization?.trim() || null;
     await u.setPassword(password);
     await r(User).save(u);
 
@@ -53,7 +58,7 @@ export async function authRegister(req: Request, res: Response, next: NextFuncti
     }
 
     const token = signToken({ userId: u.id, email: u.email });
-    res.status(201).json({ token, user: { name: u.full_name, role: u.specialization || 'Enfermeira', initials: initials(u.full_name) } });
+    res.status(201).json({ token, user: { name: u.full_name, role: u.specialization || '', initials: initials(u.full_name) } });
   } catch (e) { next(e); }
 }
 
@@ -65,7 +70,7 @@ export async function authLogin(req: Request, res: Response, next: NextFunction)
     if (!u || !(await u.checkPassword(password))) throw AppError.unauthorized('Credenciais inválidas');
     u.last_login = new Date(); await r(User).save(u);
     const token = signToken({ userId: u.id, email: u.email });
-    res.json({ token, user: { name: u.full_name, role: u.specialization || 'Enfermeira', initials: initials(u.full_name) } });
+    res.json({ token, user: { name: u.full_name, role: u.specialization || '', initials: initials(u.full_name) } });
   } catch (e) { next(e); }
 }
 
@@ -73,7 +78,7 @@ export async function authMe(req: Request, res: Response, next: NextFunction) {
   try {
     const u = await r(User).findOneBy({ id: uid(req) });
     if (!u) throw AppError.notFound();
-    res.json({ name: u.full_name, role: u.specialization || 'Enfermeira', initials: initials(u.full_name) });
+    res.json({ name: u.full_name, role: u.specialization || '', initials: initials(u.full_name) });
   } catch (e) { next(e); }
 }
 
@@ -143,7 +148,7 @@ export async function dashStats(req: Request, res: Response, next: NextFunction)
 export async function dashUpcoming(req: Request, res: Response, next: NextFunction) {
   try {
     const appts = await r(Appointment).find({ where: { user_id: uid(req) }, relations: ['patient'], order: { day_of_week: 'ASC', time: 'ASC' }, take: 5 });
-    res.json(appts.map(a => ({ name: a.patient?.name || '', detail: `${a.type} | ${a.time}`, status: a.status })));
+    res.json(appts.map(a => ({ id: a.id, patient_id: a.patient_id, name: a.patient?.name || '', detail: `${a.type} | ${a.time}`, status: a.status })));
   } catch (e) { next(e); }
 }
 
@@ -190,17 +195,15 @@ export async function agendaGet(req: Request, res: Response, next: NextFunction)
 export async function agendaCreate(req: Request, res: Response, next: NextFunction) {
   try {
     const dayParam = parseInt(req.params.day);
-    const { patient_id, name, type, time, status } = req.body;
-    let pid = patient_id;
-    // Se não tem patient_id mas tem nome, busca ou cria
-    if (!pid && name) {
-      let pat = await r(Patient).findOneBy({ name, user_id: uid(req) });
-      if (!pat) { pat = r(Patient).create({ name, user_id: uid(req), type: type || 'Ferida' }); await r(Patient).save(pat); }
-      pid = pat.id;
-    }
-    const a = r(Appointment).create({ user_id: uid(req), patient_id: pid, day_of_week: dayParam, time, type: type || 'Ferida', status: status || 'Confirmado' });
+    const { patient_id, type, time, status } = req.body;
+    assertUuid(patient_id);
+    const patient = await r(Patient).findOneBy({ id: patient_id, user_id: uid(req) });
+    if (!patient) throw AppError.notFound('Paciente não encontrado');
+    if (dayParam < 0 || dayParam > 6) throw AppError.badRequest('Dia inválido');
+    if (!time) throw AppError.badRequest('Horário obrigatório');
+    const a = r(Appointment).create({ user_id: uid(req), patient_id, day_of_week: dayParam, time, type: type || patient.type || 'Ferida', status: status || 'Confirmado' });
     await r(Appointment).save(a);
-    res.status(201).json({ id: a.id, name: req.body.name, type: a.type, time: a.time, status: a.status });
+    res.status(201).json({ id: a.id, patient_id: a.patient_id, name: patient.name, type: a.type, time: a.time, status: a.status });
   } catch (e) { next(e); }
 }
 
@@ -235,6 +238,9 @@ export async function assessmentsList(req: Request, res: Response, next: NextFun
 
 export async function assessmentGet(req: Request, res: Response, next: NextFunction) {
   try {
+    assertUuid(req.params.patientId);
+    const patient = await r(Patient).findOneBy({ id: req.params.patientId, user_id: uid(req) });
+    if (!patient) throw AppError.notFound('Paciente não encontrado');
     const wa = await r(WoundAssessment).findOneBy({ patient_id: req.params.patientId, user_id: uid(req) });
     res.json(wa || { identification: {}, characteristics: {}, care_plan: {} });
   } catch (e) { next(e); }
@@ -242,13 +248,16 @@ export async function assessmentGet(req: Request, res: Response, next: NextFunct
 
 export async function assessmentUpdate(req: Request, res: Response, next: NextFunction) {
   try {
+    assertUuid(req.params.patientId);
+    const patient = await r(Patient).findOneBy({ id: req.params.patientId, user_id: uid(req) });
+    if (!patient) throw AppError.notFound('Paciente não encontrado');
     let wa = await r(WoundAssessment).findOneBy({ patient_id: req.params.patientId, user_id: uid(req) });
     if (!wa) wa = r(WoundAssessment).create({ patient_id: req.params.patientId, user_id: uid(req) });
     const section = req.params.section as 'identification' | 'characteristics' | 'care_plan';
     (wa as any)[section] = req.body;
     await r(WoundAssessment).save(wa);
     // Atualizar last_eval do paciente
-    await r(Patient).update({ id: req.params.patientId }, { last_eval: new Date() as any });
+    await r(Patient).update({ id: patient.id, user_id: uid(req) }, { last_eval: new Date() as any });
     res.json(wa);
   } catch (e) { next(e); }
 }
@@ -260,7 +269,7 @@ export async function evolutionsFeed(req: Request, res: Response, next: NextFunc
   try {
     const evos = await r(Evolution).find({ where: { user_id: uid(req) }, relations: ['patient'], order: { created_at: 'DESC' }, take: 30 });
     res.json(evos.map(e => ({
-      id: e.id, name: e.patient?.name || '', initials: initials(e.patient?.name || 'XX'),
+      id: e.id, patient_id: e.patient_id, name: e.patient?.name || '', initials: initials(e.patient?.name || 'XX'),
       date: new Date(e.created_at).toLocaleDateString('pt-BR'), type: e.type,
       description: e.description, hasPhoto: e.has_photo,
     })));
@@ -294,6 +303,9 @@ export async function prescriptionBoard(req: Request, res: Response, next: NextF
 
 export async function prescriptionsByPatient(req: Request, res: Response, next: NextFunction) {
   try {
+    assertUuid(req.params.patientId);
+    const patient = await r(Patient).findOneBy({ id: req.params.patientId, user_id: uid(req) });
+    if (!patient) throw AppError.notFound('Paciente não encontrado');
     const all = await r(Prescription).find({ where: { patient_id: req.params.patientId, user_id: uid(req) }, order: { created_at: 'DESC' } });
     res.json(all);
   } catch (e) { next(e); }
@@ -301,7 +313,11 @@ export async function prescriptionsByPatient(req: Request, res: Response, next: 
 
 export async function prescriptionCreate(req: Request, res: Response, next: NextFunction) {
   try {
-    const p = r(Prescription).create({ ...req.body, user_id: uid(req) });
+    const patientId = req.params.patientId || req.body.patient_id;
+    assertUuid(patientId);
+    const patient = await r(Patient).findOneBy({ id: patientId, user_id: uid(req) });
+    if (!patient) throw AppError.notFound('Paciente não encontrado');
+    const p = r(Prescription).create({ ...req.body, patient_id: patientId, user_id: uid(req) });
     await r(Prescription).save(p);
     res.status(201).json(p);
   } catch (e) { next(e); }
@@ -367,35 +383,137 @@ export async function stockDelete(req: Request, res: Response, next: NextFunctio
 // ══════════════════════════════════════════════════════
 const uploadDir = path.resolve(env.upload.dir);
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-export const uploadMiddleware = multer({ storage: multer.diskStorage({ destination: (_r, _f, cb) => cb(null, uploadDir), filename: (_r, f, cb) => cb(null, Date.now() + path.extname(f.originalname)) }), limits: { fileSize: env.upload.maxFileSize } });
+export const uploadMiddleware = multer({
+  storage: multer.diskStorage({ destination: (_r, _f, cb) => cb(null, uploadDir), filename: (_r, f, cb) => cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${path.extname(f.originalname).toLowerCase()}`) }),
+  limits: { fileSize: env.upload.maxFileSize },
+  fileFilter: (_req, file, cb) => cb(null, /^image\/(jpeg|png|webp|gif)$/i.test(file.mimetype)),
+});
+
+function publicPhotoUrl(req: Request, filePath: string | null | undefined) {
+  if (!filePath) return null;
+  const normalized = filePath.startsWith('/') ? filePath : `/${filePath}`;
+  return `${req.protocol}://${req.get('host')}${normalized}`;
+}
 
 export async function photosAll(req: Request, res: Response, next: NextFunction) {
   try {
-    const patients = await r(Patient).find({ where: { user_id: uid(req) }, order: { name: 'ASC' } });
+    const userId = uid(req);
+    const patients = await r(Patient).find({
+      where: { user_id: userId },
+      order: { name: 'ASC' },
+    });
+
     const out = [];
+
     for (const p of patients) {
-      const count = await r(Photo).count({ where: { patient_id: p.id } });
-      const last = await r(Photo).findOne({ where: { patient_id: p.id }, order: { created_at: 'DESC' } });
-      out.push({ id: p.id, name: p.name, initials: initials(p.name), photoCount: count, lastPhoto: last?.created_at || null, thumbnail: last?.file_path || null });
+      const last = await r(Photo).findOne({
+        where: { patient_id: p.id, user_id: userId },
+        order: { created_at: 'DESC' },
+      });
+
+      const count = await r(Photo).count({
+        where: { patient_id: p.id, user_id: userId },
+      });
+
+      out.push({
+        id: p.id,
+        name: p.name,
+        initials: initials(p.name),
+        photoCount: count,
+        lastPhoto: last?.created_at || null,
+        thumbnail: publicPhotoUrl(req, last?.file_path),
+      });
     }
+
     res.json(out);
-  } catch (e) { next(e); }
+  } catch (e) {
+    next(e);
+  }
 }
 
 export async function photosByPatient(req: Request, res: Response, next: NextFunction) {
   try {
-    const photos = await r(Photo).find({ where: { patient_id: req.params.patientId }, order: { created_at: 'DESC' } });
-    res.json(photos.map(p => ({ id: p.id, url: p.file_path, date: p.created_at })));
-  } catch (e) { next(e); }
+    assertUuid(req.params.patientId);
+
+    const userId = uid(req);
+
+    const patient = await r(Patient).findOneBy({
+      id: req.params.patientId,
+      user_id: userId,
+    });
+
+    if (!patient) {
+      throw AppError.notFound('Paciente não encontrado');
+    }
+
+    const photos = await r(Photo).find({
+      where: {
+        patient_id: req.params.patientId,
+        user_id: userId,
+      },
+      order: { created_at: 'DESC' },
+    });
+
+    res.json(photos.map((p) => ({
+      id: p.id,
+      url: publicPhotoUrl(req, p.file_path),
+      file_path: p.file_path,
+      date: p.created_at,
+      created_at: p.created_at,
+      file_size: p.file_size,
+    })));
+  } catch (e) {
+    next(e);
+  }
 }
 
 export async function photoUpload(req: Request, res: Response, next: NextFunction) {
   try {
-    if (!req.file) throw AppError.badRequest('Nenhum arquivo');
-    const photo = r(Photo).create({ patient_id: req.params.patientId, user_id: uid(req), file_path: `/uploads/${req.file.filename}`, file_size: req.file.size });
+    assertUuid(req.params.patientId);
+
+    if (!req.file) {
+      throw AppError.badRequest('Nenhuma imagem válida foi enviada');
+    }
+
+    const userId = uid(req);
+
+    const patient = await r(Patient).findOneBy({
+      id: req.params.patientId,
+      user_id: userId,
+    });
+
+    if (!patient) {
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch {}
+
+      throw AppError.notFound('Paciente não encontrado');
+    }
+
+    const filePath = `/uploads/${req.file.filename}`;
+
+    const photo = r(Photo).create({
+      patient_id: patient.id,
+      user_id: userId,
+      file_path: filePath,
+      file_size: req.file.size,
+    });
+
     await r(Photo).save(photo);
-    res.status(201).json(photo);
-  } catch (e) { next(e); }
+
+    res.status(201).json({
+      id: photo.id,
+      patient_id: photo.patient_id,
+      user_id: photo.user_id,
+      url: publicPhotoUrl(req, photo.file_path),
+      file_path: photo.file_path,
+      date: photo.created_at,
+      created_at: photo.created_at,
+      file_size: photo.file_size,
+    });
+  } catch (e) {
+    next(e);
+  }
 }
 
 // ══════════════════════════════════════════════════════
@@ -403,7 +521,10 @@ export async function photoUpload(req: Request, res: Response, next: NextFunctio
 // ══════════════════════════════════════════════════════
 export async function documentsByPatient(req: Request, res: Response, next: NextFunction) {
   try {
-    const docs = await r(Document).find({ where: { patient_id: req.params.patientId }, order: { date: 'DESC' } });
+    assertUuid(req.params.patientId);
+    const patient = await r(Patient).findOneBy({ id: req.params.patientId, user_id: uid(req) });
+    if (!patient) throw AppError.notFound('Paciente não encontrado');
+    const docs = await r(Document).find({ where: { patient_id: req.params.patientId, user_id: uid(req) }, order: { date: 'DESC' } });
     res.json(docs.map(d => ({ name: d.name, date: new Date(d.date).toLocaleDateString('pt-BR'), size: d.size || '' })));
   } catch (e) { next(e); }
 }
@@ -421,13 +542,19 @@ export async function documentCreate(req: Request, res: Response, next: NextFunc
 // ══════════════════════════════════════════════════════
 export async function monitoringMessages(req: Request, res: Response, next: NextFunction) {
   try {
-    const msgs = await r(MonitoringMessage).find({ where: { patient_id: req.params.patientId }, order: { created_at: 'ASC' } });
+    assertUuid(req.params.patientId);
+    const patient = await r(Patient).findOneBy({ id: req.params.patientId, user_id: uid(req) });
+    if (!patient) throw AppError.notFound('Paciente não encontrado');
+    const msgs = await r(MonitoringMessage).find({ where: { patient_id: req.params.patientId, user_id: uid(req) }, order: { created_at: 'ASC' } });
     res.json(msgs.map(m => ({ id: m.id, sender: m.sender, text: m.text, timestamp: m.created_at })));
   } catch (e) { next(e); }
 }
 
 export async function monitoringSend(req: Request, res: Response, next: NextFunction) {
   try {
+    assertUuid(req.params.patientId);
+    const patient = await r(Patient).findOneBy({ id: req.params.patientId, user_id: uid(req) });
+    if (!patient) throw AppError.notFound('Paciente não encontrado');
     const msg = r(MonitoringMessage).create({ patient_id: req.params.patientId, user_id: uid(req), sender: 'professional', text: req.body.text });
     await r(MonitoringMessage).save(msg);
     res.status(201).json({ id: msg.id, sender: msg.sender, text: msg.text, timestamp: msg.created_at });
@@ -436,7 +563,10 @@ export async function monitoringSend(req: Request, res: Response, next: NextFunc
 
 export async function monitoringRequestPhoto(req: Request, res: Response, next: NextFunction) {
   try {
-    const msg = r(MonitoringMessage).create({ patient_id: req.params.patientId, user_id: uid(req), sender: 'professional', text: '📸 Solicitação de foto enviada ao paciente.' });
+    assertUuid(req.params.patientId);
+    const patient = await r(Patient).findOneBy({ id: req.params.patientId, user_id: uid(req) });
+    if (!patient) throw AppError.notFound('Paciente não encontrado');
+    const msg = r(MonitoringMessage).create({ patient_id: req.params.patientId, user_id: uid(req), sender: 'professional', text: 'Solicitação de foto enviada ao paciente.' });
     await r(MonitoringMessage).save(msg);
     res.status(201).json({ id: msg.id, sender: msg.sender, text: msg.text, timestamp: msg.created_at });
   } catch (e) { next(e); }
@@ -495,18 +625,43 @@ export async function settingsUpdate(req: Request, res: Response, next: NextFunc
 export async function usersList(req: Request, res: Response, next: NextFunction) {
   try {
     const u = await r(User).findOneBy({ id: uid(req) });
-    res.json([{ id: u?.id, name: u?.full_name, email: u?.email, role: u?.specialization || 'Enfermeira', status: 'Ativo' }]);
+    res.json([{ id: u?.id, name: u?.full_name, email: u?.email, role: u?.specialization || '', status: 'Ativo' }]);
   } catch (e) { next(e); }
 }
 
 export async function usersCreate(req: Request, res: Response, next: NextFunction) {
-  try { res.status(201).json({ id: Date.now().toString(), status: 'Ativo', ...req.body }); } catch (e) { next(e); }
+  try {
+    const { name, email, role, password } = req.body;
+    if (!name || !email || !password) throw AppError.badRequest('Nome, e-mail e senha são obrigatórios');
+    const emailNorm = String(email).toLowerCase().trim();
+    if (await r(User).findOneBy({ email: emailNorm })) throw AppError.conflict('E-mail já cadastrado');
+    const user = new User();
+    user.full_name = String(name).trim();
+    user.email = emailNorm;
+    user.specialization = role?.trim() || null;
+    await user.setPassword(password);
+    await r(User).save(user);
+    res.status(201).json({ id: user.id, name: user.full_name, email: user.email, role: user.specialization || '', status: 'Ativo' });
+  } catch (e) { next(e); }
 }
 export async function usersUpdate(req: Request, res: Response, next: NextFunction) {
-  try { res.json({ id: req.params.id, ...req.body }); } catch (e) { next(e); }
+  try {
+    const user = await r(User).findOneBy({ id: req.params.id });
+    if (!user) throw AppError.notFound('Usuário não encontrado');
+    if (req.body.name !== undefined) user.full_name = req.body.name;
+    if (req.body.email !== undefined) user.email = String(req.body.email).toLowerCase().trim();
+    if (req.body.role !== undefined) user.specialization = req.body.role || null;
+    if (req.body.password) await user.setPassword(req.body.password);
+    await r(User).save(user);
+    res.json({ id: user.id, name: user.full_name, email: user.email, role: user.specialization || '', status: user.is_active ? 'Ativo' : 'Inativo' });
+  } catch (e) { next(e); }
 }
 export async function usersDelete(req: Request, res: Response, next: NextFunction) {
-  try { res.status(204).send(); } catch (e) { next(e); }
+  try {
+    if (req.params.id === uid(req)) throw AppError.badRequest('A conta atual não pode ser removida por esta tela');
+    await r(User).delete({ id: req.params.id });
+    res.status(204).send();
+  } catch (e) { next(e); }
 }
 
 export async function integrationsGet(req: Request, res: Response, next: NextFunction) {
@@ -526,7 +681,19 @@ export async function integrationsToggle(req: Request, res: Response, next: Next
   } catch (e) { next(e); }
 }
 
-export async function securityUpdate(req: Request, res: Response) { res.json(req.body); }
+export async function securityUpdate(req: Request, res: Response, next: NextFunction) {
+  try {
+    const user = await r(User).createQueryBuilder('u').addSelect('u.password_hash').where('u.id = :id', { id: uid(req) }).getOne();
+    if (!user) throw AppError.notFound('Usuário não encontrado');
+    if (req.body.newPassword) {
+      if (!req.body.currentPassword || !(await user.checkPassword(req.body.currentPassword))) throw AppError.unauthorized('Senha atual inválida');
+      if (String(req.body.newPassword).length < 6) throw AppError.badRequest('A nova senha deve ter pelo menos 6 caracteres');
+      await user.setPassword(req.body.newPassword);
+      await r(User).save(user);
+    }
+    res.json({ message: 'Configurações de segurança atualizadas' });
+  } catch (e) { next(e); }
+}
 
 export async function backupGet(req: Request, res: Response, next: NextFunction) {
   try {
