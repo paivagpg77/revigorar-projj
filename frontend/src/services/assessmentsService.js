@@ -1,43 +1,26 @@
-import { apiClient, withFallback } from './apiClient.js'
-import { PATIENTS } from '../data/mockData.js'
+import { apiClient } from './apiClient.js'
 
-const LOCATIONS = [
-  'Membro inferior direito', 'Região sacral', 'Membro superior esquerdo',
-  'Calcâneo direito', 'Região abdominal', 'Membro inferior esquerdo', 'Região torácica',
-]
-
-/**
- * GET /assessments
- * Lista de avaliações de todos os pacientes (tela "Avaliações" no menu lateral).
- * Resposta esperada: Array<{ id, name, age, type, status, lastEval, location, assessmentStatus }>
- */
-export function listAssessments() {
-  return withFallback(
-    () => apiClient.get('/assessments'),
-    PATIENTS.map((p, i) => ({
-      ...p,
-      location: LOCATIONS[i % LOCATIONS.length],
-      assessmentStatus: i % 3 === 0 ? 'Concluída' : 'Ativo',
-    }))
-  )
+export async function listAssessments() {
+  const data = await apiClient.get('/assessments')
+  return Array.isArray(data) ? data.map((item) => ({
+    ...item,
+    assessmentStatus: item.assessmentStatus || (item.lastEval ? 'Concluída' : 'Ativo'),
+    location: item.location || 'Não informado',
+  })) : []
 }
 
-/**
- * GET /patients/:patientId/wound-assessment
- * Resposta esperada: objeto com os campos de cada seção (dadosGerais,
- * avaliacaoFerida, caracteristicas, escalasClinicas, condutas).
- */
 export function getWoundAssessment(patientId) {
-  return withFallback(() => apiClient.get(`/patients/${patientId}/wound-assessment`), null)
+  return apiClient.get(`/patients/${encodeURIComponent(patientId)}/wound-assessment`)
 }
 
-/**
- * PUT /patients/:patientId/wound-assessment/:section
- * Body: os campos daquela seção do formulário.
- */
 export function saveWoundAssessmentSection(patientId, section, data) {
-  return withFallback(
-    () => apiClient.put(`/patients/${patientId}/wound-assessment/${section}`, data),
-    data
-  )
+  const map = {
+    'Dados gerais': 'identification',
+    'Avaliação da ferida': 'identification',
+    'Características': 'characteristics',
+    'Escalas clínicas': 'characteristics',
+    'Condutas': 'care_plan',
+  }
+  const apiSection = map[section] || section
+  return apiClient.put(`/patients/${encodeURIComponent(patientId)}/wound-assessment/${apiSection}`, data)
 }

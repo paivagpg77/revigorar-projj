@@ -1,44 +1,19 @@
-/**
- * Cliente HTTP central do sistema.
- *
- * Como conectar ao seu back-end:
- * 1. Crie um arquivo `.env` na raiz do projeto (copie de `.env.example`).
- * 2. Defina VITE_API_URL apontando para a URL base da sua API, por exemplo:
- *      VITE_API_URL=https://api.revigorar.com.br
- * 3. Pronto — a partir do próximo `npm run dev`/`npm run build`, todos os
- *    serviços em `src/services/*Service.js` passam a chamar sua API de
- *    verdade em vez dos dados mockados.
- *
- * Enquanto VITE_API_URL não estiver definida (ou se uma chamada falhar),
- * cada serviço devolve os dados mockados de `src/data/mockData.js`, então o
- * front-end continua funcionando normalmente para telas/demonstração mesmo
- * sem back-end.
- */
-
-const BASE_URL = import.meta.env.VITE_API_URL || ''
+const BASE_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
 const TOKEN_KEY = 'revigorar_token'
 
 export function isApiConfigured() {
   return Boolean(BASE_URL)
 }
 
-/**
- * O token fica em sessionStorage por padrão: cada vez que o sistema é aberto
- * (nova aba/sessão do navegador), é preciso fazer login novamente.
- * Se o usuário marcar "Lembrar de mim" no login, o token vai para
- * localStorage e a sessão persiste entre execuções.
- */
 export function getToken() {
   return sessionStorage.getItem(TOKEN_KEY) || localStorage.getItem(TOKEN_KEY)
 }
 
 export function setToken(token, persist = false) {
+  clearToken()
   if (!token) return
-  if (persist) {
-    localStorage.setItem(TOKEN_KEY, token)
-  } else {
-    sessionStorage.setItem(TOKEN_KEY, token)
-  }
+  const storage = persist ? localStorage : sessionStorage
+  storage.setItem(TOKEN_KEY, token)
 }
 
 export function clearToken() {
@@ -46,40 +21,47 @@ export function clearToken() {
   localStorage.removeItem(TOKEN_KEY)
 }
 
-class ApiError extends Error {
+export class ApiError extends Error {
   constructor(status, message) {
     super(message)
+    this.name = 'ApiError'
     this.status = status
   }
 }
 
-async function request(path, { method = 'GET', body, headers = {} } = {}) {
-  const token = getToken()
+function unwrap(data) {
+  if (data && typeof data === 'object' && Object.prototype.hasOwnProperty.call(data, 'data')) {
+    return data.data
+  }
+  return data
+}
 
-  const res = await fetch(`${BASE_URL}${path}`, {
+async function request(path, { method = 'GET', body, headers = {} } = {}) {
+  if (!BASE_URL) throw new ApiError(0, 'VITE_API_URL não configurada.')
+
+  const token = getToken()
+  const response = await fetch(`${BASE_URL}${path}`, {
     method,
     headers: {
-      'Content-Type': 'application/json',
+      ...(body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...headers,
     },
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    body: body instanceof FormData ? body : body !== undefined ? JSON.stringify(body) : undefined,
   })
 
-  if (!res.ok) {
-    let message = res.statusText
-    try {
-      const data = await res.json()
-      message = data.message || data.error || message
-    } catch {
-      // resposta sem corpo JSON, mantém statusText
-    }
-    throw new ApiError(res.status, message)
+  const text = await response.text()
+  let payload = null
+  if (text) {
+    try { payload = JSON.parse(text) } catch { payload = text }
   }
 
-  if (res.status === 204) return null
-  const text = await res.text()
-  return text ? JSON.parse(text) : null
+  if (!response.ok) {
+    const message = payload?.message || payload?.error || response.statusText || 'Erro na API.'
+    throw new ApiError(response.status, message)
+  }
+
+  return unwrap(payload)
 }
 
 export const apiClient = {
@@ -90,20 +72,7 @@ export const apiClient = {
   delete: (path) => request(path, { method: 'DELETE' }),
 }
 
-/**
- * Executa `fn` (uma chamada real de API) somente se VITE_API_URL estiver
- * configurada. Caso contrário — ou se a chamada falhar (backend fora do ar,
- * endpoint ainda não implementado, etc.) — devolve `fallback` (dado
- * mockado), avisando no console em vez de quebrar a tela.
- */
-export async function withFallback(fn, fallback) {
-  if (!isApiConfigured()) return fallback
-  try {
-    return await fn()
-  } catch (err) {
-    console.warn(`[API] Falha na chamada, usando dado mockado: ${err.message}`)
-    return fallback
-  }
+// Compatibilidade com serviços antigos. Não existe fallback para mock.
+export async function withFallback(fn) {
+  return fn()
 }
-
-export { ApiError }

@@ -1,40 +1,28 @@
-import { apiClient, withFallback } from './apiClient.js'
-import { UPCOMING, WEEKLY_SERIES, WEEKDAYS, DISTRIBUTION } from '../data/mockData.js'
+import { apiClient } from './apiClient.js'
 
-/**
- * GET /dashboard/stats
- * Resposta esperada: { activePatients, assessmentsToday, evolutionsToday, pendencies }
- */
-export function getStats() {
-  return withFallback(
-    () => apiClient.get('/dashboard/stats'),
-    { activePatients: 48, assessmentsToday: 12, evolutionsToday: 8, pendencies: 5 }
-  )
+export async function getStats() {
+  const data = await apiClient.get('/dashboard/stats')
+  return {
+    activePatients: Number(data?.patients ?? data?.activePatients ?? 0),
+    assessmentsToday: Number(data?.evaluationsToday ?? data?.assessmentsToday ?? 0),
+    evolutionsToday: Number(data?.evolutionsToday ?? 0),
+    pendencies: Number(data?.pendencias ?? data?.pendencies ?? 0),
+  }
 }
 
-/**
- * GET /dashboard/upcoming
- * Resposta esperada: Array<{ name, detail, status }>
- */
-export function getUpcoming() {
-  return withFallback(() => apiClient.get('/dashboard/upcoming'), UPCOMING)
+export async function getUpcoming() {
+  const data = await apiClient.get('/dashboard/upcoming')
+  return Array.isArray(data) ? data : []
 }
 
-/**
- * GET /dashboard/weekly-series
- * Resposta esperada: { labels: string[], values: number[] }
- */
-export function getWeeklySeries() {
-  return withFallback(
-    () => apiClient.get('/dashboard/weekly-series'),
-    { labels: WEEKDAYS, values: WEEKLY_SERIES }
-  )
+export async function getWeeklySeries() {
+  const data = await apiClient.get('/dashboard/weekly-series')
+  const labels = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
+  if (Array.isArray(data)) return { labels, values: data.map((v) => Number(v) || 0) }
+  return { labels: data?.labels || labels, values: data?.values || labels.map(() => 0) }
 }
 
-/**
- * GET /dashboard/distribution
- * Resposta esperada: Array<{ label, value, color }>
- */
-export function getDistribution() {
-  return withFallback(() => apiClient.get('/dashboard/distribution'), DISTRIBUTION)
+export async function getDistribution() {
+  const data = await apiClient.get('/dashboard/distribution')
+  return Array.isArray(data) ? data : []
 }

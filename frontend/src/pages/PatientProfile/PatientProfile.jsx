@@ -15,24 +15,6 @@ import './PatientProfile.css'
 
 const TABS = ['Resumo', 'Histórico', 'Avaliações', 'Evoluções', 'Prescrições', 'Documentos']
 
-const RECENT_EVALS = [
-  { date: '12/09/2025', title: 'Avaliação de ferida', status: 'Ativo' },
-  { date: '05/09/2025', title: 'Evolução fotográfica', status: 'Concluída' },
-  { date: '28/08/2025', title: 'Avaliação de estomia', status: 'Concluída' },
-]
-
-const ASSESSMENTS = [
-  { date: '12/09/2025', location: 'Membro inferior direito', type: 'Ferida', status: 'Ativo' },
-  { date: '28/08/2025', location: 'Região sacral', type: 'Estomia', status: 'Concluída' },
-  { date: '15/08/2025', location: 'Membro inferior direito', type: 'Ferida', status: 'Concluída' },
-]
-
-const EVOLUTIONS = [
-  { date: '12/09/2025 10:24', title: 'Evolução fotográfica', description: 'Ferida em processo de cicatrização, sem sinais de infecção.' },
-  { date: '05/09/2025 14:30', title: 'Prescrição de enfermagem', description: 'Troca de cobertura com hidrogel.' },
-  { date: '28/08/2025 09:10', title: 'Avaliação clínica', description: 'Ferida com 3,2 cm de comprimento, 2,8 cm de largura.' },
-]
-
 export default function PatientProfile() {
   const { id } = useParams()
   const [tab, setTab] = useState('Resumo')
@@ -58,7 +40,7 @@ export default function PatientProfile() {
     setDraft({
       name: patient.name,
       birthDate: patient.birthDate || '',
-      gender: patient.gender || 'Feminino',
+      gender: patient.gender || '',
       cpf: patient.cpf || '',
       phone: patient.phone || '',
       type: patient.type,
@@ -255,13 +237,13 @@ export default function PatientProfile() {
               <Link to={`/pacientes/${patient.id}/avaliacao`}>Ver todas</Link>
             </div>
             <ul className="profile-timeline">
-              {RECENT_EVALS.map((item) => (
-                <li key={item.date}>
+              {records.slice(0, 3).map((item, index) => (
+                <li key={`${item.date}-${index}`}>
                   <div>
-                    <strong>{item.date}</strong>
-                    <span>{item.title}</span>
+                    <strong>{item.date || '—'}</strong>
+                    <span>{item.type || 'Registro clínico'}</span>
                   </div>
-                  <Badge>{item.status}</Badge>
+                  <Badge>{item.status || 'Registrado'}</Badge>
                 </li>
               ))}
             </ul>
@@ -311,12 +293,12 @@ export default function PatientProfile() {
                 <tr><th>Data</th><th>Localização</th><th>Tipo</th><th>Status</th><th>Ações</th></tr>
               </thead>
               <tbody>
-                {ASSESSMENTS.map((a) => (
-                  <tr key={a.date}>
-                    <td>{a.date}</td>
-                    <td>{a.location}</td>
-                    <td>{a.type}</td>
-                    <td><Badge>{a.status}</Badge></td>
+                {patient.lastEval ? (
+                  <tr>
+                    <td>{patient.lastEval}</td>
+                    <td>Não informado</td>
+                    <td>{patient.type || 'Não informado'}</td>
+                    <td><Badge>Registrada</Badge></td>
                     <td>
                       <div className="profile-table__actions">
                         <Link className="btn-icon" to={`/pacientes/${patient.id}/avaliacao`} aria-label="Ver avaliação">
@@ -328,7 +310,9 @@ export default function PatientProfile() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  <tr><td colSpan="5">Nenhuma avaliação registrada.</td></tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -342,12 +326,12 @@ export default function PatientProfile() {
             <Link to={`/pacientes/${patient.id}/evolucao`}>Ver linha do tempo completa</Link>
           </div>
           <ul className="profile-history">
-            {EVOLUTIONS.map((e) => (
-              <li key={e.date}>
+            {records.map((e, index) => (
+              <li key={`${e.date}-${e.type}-${index}`}>
                 <span className="profile-history__dot" />
                 <div>
                   <div className="profile-history__head">
-                    <strong>{e.title}</strong>
+                    <strong>{e.type || 'Registro clínico'}</strong>
                     <span>{e.date}</span>
                   </div>
                   <p>{e.description}</p>

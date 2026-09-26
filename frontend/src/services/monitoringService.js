@@ -1,48 +1,25 @@
-import { apiClient, withFallback } from './apiClient.js'
+import { apiClient } from './apiClient.js'
 
-const INITIAL_MESSAGES = [
-  { id: 1, from: 'patient', time: '14:20', text: 'enviou uma foto pelo WhatsApp', photo: true },
-  { id: 2, from: 'nurse', name: 'Enfermeira Ana Silva', time: '14:35', text: 'Ok, ferida evoluindo bem. Manter cuidados. Obrigada!' },
-]
-
-/**
- * GET /patients/:patientId/monitoring/messages
- * Resposta esperada: Array<{ id, from: 'patient'|'nurse', name, time, text, photo }>
- */
-export function getMessages(patientId) {
-  return withFallback(() => apiClient.get(`/patients/${patientId}/monitoring/messages`), INITIAL_MESSAGES)
+export async function getMessages(patientId) {
+  const data = await apiClient.get(`/patients/${encodeURIComponent(patientId)}/monitoring/messages`)
+  return Array.isArray(data) ? data.map((m) => ({
+    id: m.id,
+    from: m.sender === 'professional' ? 'nurse' : 'patient',
+    name: m.name || '',
+    time: m.timestamp ? new Date(m.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '',
+    text: m.text,
+    photo: Boolean(m.photo),
+  })) : []
 }
 
-/**
- * POST /patients/:patientId/monitoring/messages
- * Body: { text }
- * Obs: o envio real ao paciente (WhatsApp, SMS, etc.) fica a cargo do seu
- * back-end / integração já configurada em Configurações > Integrações.
- */
-export function sendMessage(patientId, text) {
-  return withFallback(
-    () => apiClient.post(`/patients/${patientId}/monitoring/messages`, { text }),
-    { id: Date.now(), from: 'nurse', text }
-  )
+export async function sendMessage(patientId, text) {
+  return apiClient.post(`/patients/${encodeURIComponent(patientId)}/monitoring/messages`, { text })
 }
 
-/**
- * POST /patients/:patientId/monitoring/request-photo
- */
-export function requestPhoto(patientId) {
-  return withFallback(
-    () => apiClient.post(`/patients/${patientId}/monitoring/request-photo`, {}),
-    { id: Date.now(), from: 'nurse', text: 'solicitou uma nova foto da ferida ao paciente' }
-  )
+export async function requestPhoto(patientId) {
+  return apiClient.post(`/patients/${encodeURIComponent(patientId)}/monitoring/request-photo`, {})
 }
 
-/**
- * GET /patients/:patientId/monitoring/status
- * Resposta esperada: { active: boolean, nextContact: string }
- */
 export function getMonitoringStatus(patientId) {
-  return withFallback(
-    () => apiClient.get(`/patients/${patientId}/monitoring/status`),
-    { active: true, nextContact: '18/09/2025' }
-  )
+  return apiClient.get(`/patients/${encodeURIComponent(patientId)}/monitoring/status`)
 }

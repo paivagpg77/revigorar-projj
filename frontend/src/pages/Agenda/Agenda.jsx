@@ -12,7 +12,7 @@ export default function Agenda() {
   const [schedule, setSchedule] = useState({ Seg: [], Ter: [], Qua: [], Qui: [], Sex: [], Sáb: [], Dom: [] })
   const [patients, setPatients] = useState([])
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({ name: '', time: '', type: 'Ferida' })
+  const [form, setForm] = useState({ patient_id: '', time: '', type: 'Ferida' })
 
   useEffect(() => {
     let active = true
@@ -20,7 +20,7 @@ export default function Agenda() {
     listPatients().then((data) => {
       if (active) {
         setPatients(data)
-        setForm((f) => ({ ...f, name: f.name || data[0]?.name || '' }))
+        setForm((f) => ({ ...f, patient_id: f.patient_id || data[0]?.id || '' }))
       }
     })
     return () => { active = false }
@@ -46,13 +46,14 @@ export default function Agenda() {
 
   const addAppointment = async (e) => {
     e.preventDefault()
-    if (!form.time) return
-    const created = await createAppointment(activeDay, { name: form.name, time: form.time, type: form.type })
+    if (!form.time || !form.patient_id) return
+    const patient = patients.find((p) => p.id === form.patient_id)
+    const created = await createAppointment(activeDay, { patient_id: form.patient_id, name: patient?.name || '', time: form.time, type: form.type })
     setSchedule((s) => ({
       ...s,
       [activeDay]: [...s[activeDay], created],
     }))
-    setForm({ name: patients[0]?.name || '', time: '', type: 'Ferida' })
+    setForm({ patient_id: patients[0]?.id || '', time: '', type: 'Ferida' })
     setShowForm(false)
   }
 

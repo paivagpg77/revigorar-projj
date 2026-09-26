@@ -1,49 +1,27 @@
-import { apiClient, withFallback } from './apiClient.js'
+import { apiClient } from './apiClient.js'
 
-const INITIAL_SCHEDULE = {
-  Seg: [
-    { id: 1, name: 'Maria Santos', time: '09:00', type: 'Ferida', status: 'Confirmado' },
-    { id: 2, name: 'João Almeida', time: '10:30', status: 'Confirmado', type: 'Estomia' },
-  ],
-  Ter: [{ id: 3, name: 'Carla Souza', time: '14:00', type: 'Ferida', status: 'Pendente' }],
-  Qua: [],
-  Qui: [{ id: 4, name: 'Antônio Lima', time: '11:00', type: 'Estomia', status: 'Confirmado' }],
-  Sex: [{ id: 5, name: 'Beatriz Rocha', time: '08:30', type: 'Ferida', status: 'Pendente' }],
-  Sáb: [],
-  Dom: [],
+const DAYS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
+
+export async function getSchedule() {
+  const data = await apiClient.get('/agenda')
+  const empty = Object.fromEntries(DAYS.map((d) => [d, []]))
+  if (Array.isArray(data)) {
+    for (const day of data) empty[day.label] = Array.isArray(day.appointments) ? day.appointments : []
+    return empty
+  }
+  return { ...empty, ...(data || {}) }
 }
 
-/**
- * GET /agenda
- * Resposta esperada: { Seg: [...], Ter: [...], ... }
- * Cada item: { id, name, time, type, status }
- */
-export function getSchedule() {
-  return withFallback(() => apiClient.get('/agenda'), INITIAL_SCHEDULE)
-}
-
-/**
- * POST /agenda/:day
- * Body: { name, time, type }
- */
 export function createAppointment(day, data) {
-  return withFallback(
-    () => apiClient.post(`/agenda/${day}`, data),
-    { id: Date.now(), status: 'Pendente', ...data }
-  )
+  const dayIndex = DAYS.indexOf(day)
+  if (dayIndex < 0) throw new Error('Dia inválido.')
+  return apiClient.post(`/agenda/${dayIndex}`, data)
 }
 
-/**
- * PATCH /agenda/appointments/:id
- * Body: { status }
- */
-export function updateAppointmentStatus(appointmentId, status) {
-  return withFallback(() => apiClient.patch(`/agenda/appointments/${appointmentId}`, { status }), { id: appointmentId, status })
+export function updateAppointmentStatus(id, status) {
+  return apiClient.patch(`/agenda/appointments/${encodeURIComponent(id)}`, { status })
 }
 
-/**
- * DELETE /agenda/appointments/:id
- */
-export function deleteAppointment(appointmentId) {
-  return withFallback(() => apiClient.delete(`/agenda/appointments/${appointmentId}`), null)
+export function deleteAppointment(id) {
+  return apiClient.delete(`/agenda/appointments/${encodeURIComponent(id)}`)
 }

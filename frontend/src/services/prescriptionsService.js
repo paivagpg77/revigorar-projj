@@ -1,80 +1,60 @@
-import { apiClient, withFallback } from './apiClient.js'
-import { DRESSING_CATALOG } from '../data/mockData.js'
+import { apiClient } from './apiClient.js'
 
-const INITIAL_PATIENT_ROWS = [
-  { id: 1, date: '12/09/2025', type: 'Enfermagem', description: 'Troca de cobertura com hidrogel', status: 'Ativa' },
-  { id: 2, date: '10/09/2025', type: 'Medicamento', description: 'Analgésico (se necessário)', status: 'Concluída' },
-  { id: 3, date: '05/09/2025', type: 'Enfermagem', description: 'Limpeza da ferida com SF 0,9%', status: 'Concluída' },
-  { id: 4, date: '28/08/2025', type: 'Nutrição', description: 'Suplementação proteica', status: 'Concluída' },
-]
-
-const INITIAL_BOARD = [
-  { id: 1, patient: 'Maria Santos', type: 'Enfermagem', description: 'Troca de cobertura com hidrogel', status: 'Ativa' },
-  { id: 2, patient: 'João Almeida', type: 'Estomia', description: 'Troca de bolsa de estomia', status: 'Ativa' },
-  { id: 3, patient: 'Carla Souza', type: 'Medicamento', description: 'Analgésico (se necessário)', status: 'Ativa' },
-  { id: 4, patient: 'Antônio Lima', type: 'Nutrição', description: 'Suplementação proteica', status: 'Concluída' },
-  { id: 5, patient: 'Beatriz Rocha', type: 'Enfermagem', description: 'Limpeza da ferida com SF 0,9%', status: 'Concluída' },
-]
-
-/**
- * GET /patients/:patientId/prescriptions
- * Resposta esperada: Array<{ id, date, type, description, status }>
- */
-export function listPatientPrescriptions(patientId) {
-  return withFallback(() => apiClient.get(`/patients/${patientId}/prescriptions`), INITIAL_PATIENT_ROWS)
+function normalizeRow(row) {
+  return {
+    ...row,
+    type: row.type || row.category || '',
+    date: row.date || (row.created_at ? new Date(row.created_at).toLocaleDateString('pt-BR') : '—'),
+    status: row.status === 'active' ? 'Ativa' : row.status === 'completed' ? 'Concluída' : (row.status || 'Ativa'),
+  }
 }
 
-/**
- * POST /patients/:patientId/prescriptions
- * Body: { type, description }
- */
-export function createPatientPrescription(patientId, data) {
-  return withFallback(
-    () => apiClient.post(`/patients/${patientId}/prescriptions`, data),
-    { id: Date.now(), date: new Date().toLocaleDateString('pt-BR'), status: 'Ativa', ...data }
-  )
+export async function listPatientPrescriptions(patientId) {
+  const data = await apiClient.get(`/patients/${encodeURIComponent(patientId)}/prescriptions`)
+  return Array.isArray(data) ? data.map(normalizeRow) : []
 }
 
-/**
- * PUT /prescriptions/:id
- * Body: campos a atualizar (ex: { description } ou { status })
- */
+export async function createPatientPrescription(patientId, data) {
+  return normalizeRow(await apiClient.post(`/patients/${encodeURIComponent(patientId)}/prescriptions`, {
+    category: data.type,
+    description: data.description,
+    status: 'active',
+  }))
+}
+
 export function updatePrescription(id, data) {
-  return withFallback(() => apiClient.put(`/prescriptions/${id}`, data), { id, ...data })
+  const payload = { ...data }
+  if (payload.status === 'Ativa') payload.status = 'active'
+  if (payload.status === 'Concluída') payload.status = 'completed'
+  if (payload.type) { payload.category = payload.type; delete payload.type }
+  return apiClient.put(`/prescriptions/${encodeURIComponent(id)}`, payload).then(normalizeRow)
 }
 
-/**
- * DELETE /prescriptions/:id
- */
 export function deletePrescription(id) {
-  return withFallback(() => apiClient.delete(`/prescriptions/${id}`), null)
+  return apiClient.delete(`/prescriptions/${encodeURIComponent(id)}`)
 }
 
-/**
- * GET /prescriptions
- * Todas as prescrições, de todos os pacientes (tela "Prescrições" no menu,
- * exibida em formato quadro/Kanban).
- * Resposta esperada: Array<{ id, patient, type, description, status }>
- */
-export function listAllPrescriptions() {
-  return withFallback(() => apiClient.get('/prescriptions'), INITIAL_BOARD)
+export async function listAllPrescriptions() {
+  const data = await apiClient.get('/prescriptions')
+  const active = Array.isArray(data?.active) ? data.active : []
+  const completed = Array.isArray(data?.completed) ? data.completed : []
+  return [...active, ...completed].map(normalizeRow).map((p) => ({ ...p, patient: p.patient || p.name || '' }))
 }
 
-/**
- * POST /prescriptions
- * Body: { patient, type, description }
- */
-export function createPrescription(data) {
-  return withFallback(
-    () => apiClient.post('/prescriptions', data),
-    { id: Date.now(), status: 'Ativa', ...data }
-  )
+export async function createPrescription(data) {
+  const patientName = data.patient
+  const patients = await apiClient.get('/patients')
+  const patient = Array.isArray(patients) ? patients.find((p) => p.name === patientName) : null
+  if (!patient?.id) throw new Error('Paciente não encontrado.')
+  return normalizeRow(await apiClient.post('/prescriptions', {
+    patient_id: patient.id,
+    category: data.type,
+    description: data.description,
+    status: 'active',
+  }))
 }
 
-/**
- * GET /dressing-catalog
- * Resposta esperada: Array<{ name, indication, frequency }>
- */
-export function getDressingCatalog() {
-  return withFallback(() => apiClient.get('/dressing-catalog'), DRESSING_CATALOG)
+export async function getDressingCatalog() {
+  const data = await apiClient.get('/dressing-catalog')
+  return Array.isArray(data) ? data : []
 }

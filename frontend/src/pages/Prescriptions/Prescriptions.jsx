@@ -4,7 +4,7 @@ import { Plus, Pencil, FileText, Droplet, X } from 'lucide-react'
 import Breadcrumb from '../../components/Breadcrumb/Breadcrumb.jsx'
 import Tabs from '../../components/Tabs/Tabs.jsx'
 import Badge from '../../components/Badge/Badge.jsx'
-import { PATIENTS } from '../../data/mockData.js'
+import { getPatient } from '../../services/patientsService.js'
 import { useToast } from '../../components/Toast/ToastContext.jsx'
 import {
   listPatientPrescriptions,
@@ -23,12 +23,12 @@ export default function Prescriptions() {
   const [catalog, setCatalog] = useState([])
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({ type: 'Enfermagem', description: '' })
-  const patient = PATIENTS.find((p) => String(p.id) === id) || PATIENTS[0]
+  const [patient, setPatient] = useState(null)
   const showToast = useToast()
 
   useEffect(() => {
     let active = true
-    listPatientPrescriptions(id).then((data) => { if (active) setRows(data) })
+    Promise.all([getPatient(id), listPatientPrescriptions(id)]).then(([p, data]) => { if (active) { setPatient(p); setRows(data) } }).catch((err) => showToast(err.message || 'Não foi possível carregar as prescrições.'))
     getDressingCatalog().then((data) => { if (active) setCatalog(data) })
     return () => { active = false }
   }, [id])
@@ -54,6 +54,8 @@ export default function Prescriptions() {
   const viewDocument = (row) => {
     showToast(`Abrindo documento de "${row.description}"...`)
   }
+
+  if (!patient) return <div className="page"><p>Carregando prescrições...</p></div>
 
   return (
     <div className="page">

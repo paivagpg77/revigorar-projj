@@ -49,7 +49,7 @@ export default function App() {
         <Route path="/estoque" element={<Stock />} />
         <Route path="/fotos" element={<PhotosList />} />
         <Route path="/relatorios" element={<Reports />} />
-        <Route path="/indicadores" element={<Navigate to="/relatorios" replace />} />
+        <Route path="/indicadores" element={<Reports />} />
         <Route path="/configuracoes" element={<Settings />} />
       </Route>
 

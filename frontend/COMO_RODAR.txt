@@ -1,0 +1,14 @@
+REVIGORAR FRONTEND
+
+1. Abra o terminal nesta pasta.
+2. Confirme o arquivo .env:
+   VITE_API_URL=http://localhost:3000/api
+3. Instale as dependências:
+   npm install
+4. Inicie:
+   npm run dev
+
+Abra http://localhost:5173
+
+Este frontend não usa mockData.js. As páginas autenticadas usam exclusivamente a API.
+Fotos são enviadas como multipart/form-data para o backend e exibidas a partir de /uploads.

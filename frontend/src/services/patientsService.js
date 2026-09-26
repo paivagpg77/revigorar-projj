@@ -1,48 +1,27 @@
-import { apiClient, withFallback } from './apiClient.js'
-import { PATIENTS } from '../data/mockData.js'
+import { apiClient } from './apiClient.js'
 
-/**
- * GET /patients
- * Resposta esperada: Array<{ id, name, age, type, status, lastEval }>
- */
-export function listPatients() {
-  return withFallback(() => apiClient.get('/patients'), PATIENTS)
+export async function listPatients(params = {}) {
+  const query = new URLSearchParams()
+  if (params.search) query.set('search', params.search)
+  if (params.status) query.set('status', params.status)
+  if (params.page) query.set('page', params.page)
+  if (params.limit) query.set('limit', params.limit)
+  const qs = query.toString()
+  return apiClient.get(qs ? `/patients?${qs}` : '/patients')
 }
 
-/**
- * GET /patients/:id
- * Resposta esperada: { id, name, age, type, status, lastEval, ... }
- */
 export function getPatient(id) {
-  return withFallback(
-    () => apiClient.get(`/patients/${id}`),
-    PATIENTS.find((p) => String(p.id) === String(id)) || PATIENTS[0]
-  )
+  return apiClient.get(`/patients/${encodeURIComponent(id)}`)
 }
 
-/**
- * POST /patients
- * Body: { name, age, type }
- * Resposta esperada: paciente criado, com id gerado pelo backend
- */
 export function createPatient(data) {
-  return withFallback(
-    () => apiClient.post('/patients', data),
-    { id: Date.now(), status: 'Ativo', lastEval: '—', ...data }
-  )
+  return apiClient.post('/patients', data)
 }
 
-/**
- * PUT /patients/:id
- * Body: campos a atualizar
- */
 export function updatePatient(id, data) {
-  return withFallback(() => apiClient.put(`/patients/${id}`, data), { id, ...data })
+  return apiClient.put(`/patients/${encodeURIComponent(id)}`, data)
 }
 
-/**
- * DELETE /patients/:id
- */
 export function deletePatient(id) {
-  return withFallback(() => apiClient.delete(`/patients/${id}`), null)
+  return apiClient.delete(`/patients/${encodeURIComponent(id)}`)
 }

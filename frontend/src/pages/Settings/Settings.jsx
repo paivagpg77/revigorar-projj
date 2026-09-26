@@ -27,7 +27,7 @@ export default function Settings() {
   const [institution, setInstitution] = useState({ name: '', cnpj: '', email: '', phone: '', address: '' })
   const [users, setUsers] = useState([])
   const [showUserForm, setShowUserForm] = useState(false)
-  const [userForm, setUserForm] = useState({ name: '', email: '', role: 'Enfermeira' })
+  const [userForm, setUserForm] = useState({ name: '', email: '', role: '', password: '' })
   const [passwords, setPasswords] = useState({ current: '', next: '', confirm: '' })
   const [backupInfo, setBackupInfo] = useState({ when: '—', status: '—', frequency: 'Diário' })
   const [backingUp, setBackingUp] = useState(false)
@@ -59,7 +59,7 @@ export default function Settings() {
     if (!userForm.name.trim() || !userForm.email.trim()) return
     const created = await createUser(userForm)
     setUsers((list) => [...list, created])
-    setUserForm({ name: '', email: '', role: 'Enfermeira' })
+    setUserForm({ name: '', email: '', role: '', password: '' })
     setShowUserForm(false)
     showToast('Usuário adicionado.')
   }
@@ -207,7 +207,11 @@ export default function Settings() {
                     <input type="email" value={userForm.email} onChange={(e) => setUserForm((f) => ({ ...f, email: e.target.value }))} required />
                   </div>
                   <div className="form-field">
-                    <label>Perfil</label>
+                    <label>Senha inicial</label>
+                    <input type="password" value={userForm.password} onChange={(e) => setUserForm((f) => ({ ...f, password: e.target.value }))} minLength={6} required />
+                  </div>
+                  <div className="form-field">
+                    <label>Perfil / especialidade</label>
                     <select value={userForm.role} onChange={(e) => setUserForm((f) => ({ ...f, role: e.target.value }))}>
                       <option>Enfermeira</option>
                       <option>Estomaterapeuta</option>
