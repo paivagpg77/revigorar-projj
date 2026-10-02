@@ -13,4 +13,19 @@ API: http://localhost:3000
 Health: http://localhost:3000/health
 Uploads: http://localhost:3000/uploads/<arquivo>
 
+Rotas principais usadas pelo frontend:
+- /api/auth/login
+- /api/auth/register
+- /api/auth/me
+- /api/patients
+- /api/assessments
+- /api/patients/:patientId/wound-assessment
+- /api/evolutions/feed
+- /api/agenda
+- /api/prescriptions
+- /api/stock
+- /api/photos
+- /api/reports
+- /api/settings/*
+
 O backend não cria pacientes, evoluções ou fotos fictícios. Os dados são separados pelo user_id do token JWT.

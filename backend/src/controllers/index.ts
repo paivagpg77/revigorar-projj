@@ -324,7 +324,17 @@ export async function assessmentUpdate(req: Request, res: Response, next: NextFu
     let wa = await r(WoundAssessment).findOneBy({ patient_id: req.params.patientId, user_id: uid(req) });
     if (!wa) wa = r(WoundAssessment).create({ patient_id: req.params.patientId, user_id: uid(req) });
     const section = req.params.section as 'identification' | 'characteristics' | 'care_plan';
-    (wa as any)[section] = req.body;
+    const allowedSections = ['identification', 'characteristics', 'care_plan'];
+    if (!allowedSections.includes(section)) throw AppError.badRequest('Seção de avaliação inválida');
+
+    // Cada aba da avaliação grava somente os seus campos.
+    // Mesclar aqui evita que salvar "Escalas clínicas" apague os campos
+    // anteriormente salvos em "Características", por exemplo.
+    const currentSection = (wa as any)[section];
+    const previous = currentSection && typeof currentSection === 'object' && !Array.isArray(currentSection)
+      ? currentSection
+      : {};
+    (wa as any)[section] = { ...previous, ...req.body };
     await r(WoundAssessment).save(wa);
     // Atualizar last_eval do paciente
     await r(Patient).update({ id: patient.id, user_id: uid(req) }, { last_eval: new Date() as any });
