@@ -3,7 +3,14 @@ import { apiClient } from './apiClient.js'
 export async function listReports() {
   const data = await apiClient.get('/reports')
   if (!Array.isArray(data)) return data || {}
-  return Object.fromEntries(data.map((item) => [item.label, { series: [], label: `${item.value ?? 0} registro(s)`, value: item.value ?? 0 }]))
+  return Object.fromEntries(data.map((item) => [
+    item.label,
+    {
+      series: Array.isArray(item.series) ? item.series.map((value) => Number(value) || 0) : [],
+      label: `${item.value ?? 0} registro(s)`,
+      value: Number(item.value) || 0,
+    },
+  ]))
 }
 
 export async function getWeekdays() {

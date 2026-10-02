@@ -14,3 +14,7 @@ export async function getEvolutionFeed() {
   const data = await apiClient.get('/evolutions/feed')
   return Array.isArray(data) ? data : []
 }
+
+export async function createEvolution(data) {
+  return apiClient.post('/evolutions', data)
+}

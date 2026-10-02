@@ -32,6 +32,7 @@ api.put('/patients/:patientId/wound-assessment/:section', c.assessmentUpdate);
 
 // Evolutions
 api.get('/evolutions/feed', c.evolutionsFeed);
+api.post('/evolutions', c.evolutionCreate);
 api.get('/patients/:patientId/records', c.patientRecords);
 api.get('/patients/:patientId/evolution-timeline', c.patientTimeline);
 

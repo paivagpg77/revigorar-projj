@@ -13,15 +13,20 @@ export default function Agenda() {
   const [patients, setPatients] = useState([])
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({ patient_id: '', time: '', type: 'Ferida' })
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     let active = true
-    getSchedule().then((data) => { if (active) setSchedule(data) })
-    listPatients().then((data) => {
-      if (active) {
-        setPatients(data)
-        setForm((f) => ({ ...f, patient_id: f.patient_id || data[0]?.id || '' }))
-      }
+    Promise.all([getSchedule(), listPatients()]).then(([scheduleData, patientData]) => {
+      if (!active) return
+      setSchedule(scheduleData)
+      setPatients(Array.isArray(patientData) ? patientData : [])
+      setForm((f) => ({ ...f, patient_id: f.patient_id || patientData?.[0]?.id || '' }))
+    }).catch((err) => {
+      if (active) setError(err?.message || 'Não foi possível carregar a agenda.')
+    }).finally(() => {
+      if (active) setLoading(false)
     })
     return () => { active = false }
   }, [])
@@ -57,6 +62,8 @@ export default function Agenda() {
     setShowForm(false)
   }
 
+  if (loading) return <div className="page"><div className="panel">Carregando agenda...</div></div>
+
   return (
     <div className="page">
       <div className="page-header">
@@ -68,6 +75,8 @@ export default function Agenda() {
           <Plus size={15} /> Novo agendamento
         </button>
       </div>
+
+      {error && <div className="panel"><p>{error}</p></div>}
 
       <div className="agenda-days">
         {DAYS.map((day) => (
@@ -86,8 +95,8 @@ export default function Agenda() {
         <form className="panel agenda-form" onSubmit={addAppointment}>
           <div className="form-field">
             <label>Paciente</label>
-            <select value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}>
-              {patients.map((p) => <option key={p.id}>{p.name}</option>)}
+            <select value={form.patient_id} onChange={(e) => setForm((f) => ({ ...f, patient_id: e.target.value }))}>
+              {patients.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </div>
           <div className="form-field">

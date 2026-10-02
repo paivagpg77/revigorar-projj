@@ -87,10 +87,24 @@ export async function authMe(req: Request, res: Response, next: NextFunction) {
 // ══════════════════════════════════════════════════════
 export async function patientsList(req: Request, res: Response, next: NextFunction) {
   try {
-    const data = await r(Patient).find({ where: { user_id: uid(req) }, order: { name: 'ASC' } });
+    const userId = uid(req);
+    const search = String(req.query.search || '').trim();
+    const status = String(req.query.status || '').trim();
+
+    const qb = r(Patient).createQueryBuilder('p')
+      .where('p.user_id = :userId', { userId })
+      .orderBy('p.name', 'ASC');
+
+    if (search) qb.andWhere('p.name ILIKE :search', { search: `%${search}%` });
+    if (status) qb.andWhere('p.status = :status', { status });
+
+    const data = await qb.getMany();
     const out = data.map(p => ({
-      ...p, age: calcAge(p.birth_date), birthDate: p.birth_date,
-      selfResponsible: p.self_responsible, responsibleName: p.responsible_name,
+      ...p,
+      age: calcAge(p.birth_date),
+      birthDate: p.birth_date,
+      selfResponsible: p.self_responsible,
+      responsibleName: p.responsible_name,
       lastEval: p.last_eval ? new Date(p.last_eval).toLocaleDateString('pt-BR') : null,
     }));
     res.json(out);
@@ -107,9 +121,47 @@ export async function patientGet(req: Request, res: Response, next: NextFunction
 
 export async function patientCreate(req: Request, res: Response, next: NextFunction) {
   try {
-    const p = r(Patient).create({ ...req.body, user_id: uid(req), self_responsible: req.body.selfResponsible, responsible_name: req.body.responsibleName });
+    const {
+      name, birth_date, birthDate, cpf, email, phone, address, gender, type, status,
+      medical_history, medicalHistory, comorbidities, medications, allergies,
+      insurance_provider, insuranceProvider, insurance_number, insuranceNumber,
+      selfResponsible, responsibleName,
+    } = req.body;
+
+    if (!name || !(birth_date || birthDate)) {
+      throw AppError.badRequest('Nome e data de nascimento obrigatórios');
+    }
+
+    const p = r(Patient).create({
+      user_id: uid(req),
+      name: String(name).trim(),
+      birth_date: birth_date || birthDate,
+      cpf: cpf || null,
+      email: email || null,
+      phone: phone || null,
+      address: address || null,
+      gender: gender || null,
+      type: type || 'Ferida',
+      status: status || 'Ativo',
+      self_responsible: selfResponsible !== undefined ? Boolean(selfResponsible) : true,
+      responsible_name: responsibleName || null,
+      medical_history: medical_history || medicalHistory || null,
+      comorbidities: comorbidities || null,
+      medications: medications || null,
+      allergies: allergies || null,
+      insurance_provider: insurance_provider || insuranceProvider || null,
+      insurance_number: insurance_number || insuranceNumber || null,
+    });
+
     await r(Patient).save(p);
-    res.status(201).json({ ...p, age: calcAge(p.birth_date) });
+    res.status(201).json({
+      ...p,
+      age: calcAge(p.birth_date),
+      birthDate: p.birth_date,
+      selfResponsible: p.self_responsible,
+      responsibleName: p.responsible_name,
+      lastEval: null,
+    });
   } catch (e) { next(e); }
 }
 
@@ -138,10 +190,11 @@ export async function patientDelete(req: Request, res: Response, next: NextFunct
 export async function dashStats(req: Request, res: Response, next: NextFunction) {
   try {
     const u = uid(req);
-    const patients = await r(Patient).count({ where: { user_id: u, status: 'Ativo' } });
-    const evalsToday = await r(Evolution).createQueryBuilder('e').where('e.user_id = :u AND DATE(e.created_at) = CURRENT_DATE', { u }).getCount();
-    const pendencias = await r(Appointment).count({ where: { user_id: u, status: 'Pendente' } });
-    res.json({ patients, evaluationsToday: evalsToday, evolutionsToday: evalsToday, pendencias });
+    const patients = await r(Patient).createQueryBuilder('p').where('p.user_id = :u', { u }).andWhere("p.status IN ('Ativo', 'active')").getCount();
+    const evalsToday = await r(WoundAssessment).createQueryBuilder('a').where('a.user_id = :u AND DATE(a.updated_at) = CURRENT_DATE', { u }).getCount();
+    const evolutionsToday = await r(Evolution).createQueryBuilder('e').where('e.user_id = :u AND DATE(e.created_at) = CURRENT_DATE', { u }).getCount();
+    const pendencias = await r(Appointment).createQueryBuilder('a').where('a.user_id = :u', { u }).andWhere("a.status IN ('Pendente', 'pending')").getCount();
+    res.json({ patients, evaluationsToday: evalsToday, evolutionsToday, pendencias });
   } catch (e) { next(e); }
 }
 
@@ -228,11 +281,28 @@ export async function agendaDelete(req: Request, res: Response, next: NextFuncti
 // ══════════════════════════════════════════════════════
 export async function assessmentsList(req: Request, res: Response, next: NextFunction) {
   try {
-    const patients = await r(Patient).find({ where: { user_id: uid(req) }, order: { last_eval: 'DESC' } });
-    res.json(patients.map(p => ({
-      id: p.id, name: p.name, age: calcAge(p.birth_date), initials: initials(p.name),
-      type: p.type || 'Ferida', status: p.status, location: '', lastEval: p.last_eval ? new Date(p.last_eval).toLocaleDateString('pt-BR') : null,
-    })));
+    const assessments = await r(WoundAssessment).find({
+      where: { user_id: uid(req) },
+      relations: ['patient'],
+      order: { updated_at: 'DESC' },
+    });
+
+    res.json(assessments.map(a => {
+      const patient = a.patient;
+      const identification = a.identification || {};
+      return {
+        id: patient?.id,
+        assessmentId: a.id,
+        name: patient?.name || 'Paciente',
+        age: calcAge(patient?.birth_date || null),
+        initials: initials(patient?.name || 'Paciente'),
+        type: patient?.type || 'Ferida',
+        status: patient?.status || 'Ativo',
+        assessmentStatus: Object.keys(identification).length ? 'Concluída' : 'Ativo',
+        location: identification.localizacao || 'Não informado',
+        lastEval: a.updated_at ? new Date(a.updated_at).toLocaleDateString('pt-BR') : null,
+      };
+    }));
   } catch (e) { next(e); }
 }
 
@@ -265,6 +335,41 @@ export async function assessmentUpdate(req: Request, res: Response, next: NextFu
 // ══════════════════════════════════════════════════════
 // EVOLUTIONS — GET /evolutions/feed, GET /patients/:id/records, /evolution-timeline
 // ══════════════════════════════════════════════════════
+export async function evolutionCreate(req: Request, res: Response, next: NextFunction) {
+  try {
+    const patientId = String(req.body.patient_id || '');
+    assertUuid(patientId);
+
+    const patient = await r(Patient).findOneBy({ id: patientId, user_id: uid(req) });
+    if (!patient) throw AppError.notFound('Paciente não encontrado');
+
+    const description = String(req.body.description || '').trim();
+    if (!description) throw AppError.badRequest('Descrição da evolução obrigatória');
+
+    const user = await r(User).findOneBy({ id: uid(req) });
+    const evolution = r(Evolution).create({
+      patient_id: patientId,
+      user_id: uid(req),
+      type: req.body.type || 'Avaliação',
+      description,
+      professional: user?.full_name || null,
+      has_photo: Boolean(req.body.has_photo),
+    });
+
+    await r(Evolution).save(evolution);
+    res.status(201).json({
+      id: evolution.id,
+      patient_id: evolution.patient_id,
+      name: patient.name,
+      date: evolution.created_at,
+      type: evolution.type,
+      description: evolution.description,
+      professional: evolution.professional,
+      hasPhoto: evolution.has_photo,
+    });
+  } catch (e) { next(e); }
+}
+
 export async function evolutionsFeed(req: Request, res: Response, next: NextFunction) {
   try {
     const evos = await r(Evolution).find({ where: { user_id: uid(req) }, relations: ['patient'], order: { created_at: 'DESC' }, take: 30 });
@@ -278,6 +383,9 @@ export async function evolutionsFeed(req: Request, res: Response, next: NextFunc
 
 export async function patientRecords(req: Request, res: Response, next: NextFunction) {
   try {
+    assertUuid(req.params.patientId);
+    const patient = await r(Patient).findOneBy({ id: req.params.patientId, user_id: uid(req) });
+    if (!patient) throw AppError.notFound('Paciente não encontrado');
     const evos = await r(Evolution).find({ where: { patient_id: req.params.patientId, user_id: uid(req) }, order: { created_at: 'DESC' } });
     res.json(evos.map(e => ({ date: new Date(e.created_at).toLocaleDateString('pt-BR'), type: e.type, professional: e.professional, description: e.description })));
   } catch (e) { next(e); }
@@ -285,6 +393,9 @@ export async function patientRecords(req: Request, res: Response, next: NextFunc
 
 export async function patientTimeline(req: Request, res: Response, next: NextFunction) {
   try {
+    assertUuid(req.params.patientId);
+    const patient = await r(Patient).findOneBy({ id: req.params.patientId, user_id: uid(req) });
+    if (!patient) throw AppError.notFound('Paciente não encontrado');
     const evos = await r(Evolution).find({ where: { patient_id: req.params.patientId, user_id: uid(req) }, order: { created_at: 'ASC' } });
     res.json(evos);
   } catch (e) { next(e); }
@@ -499,7 +610,12 @@ export async function photoUpload(req: Request, res: Response, next: NextFunctio
       file_size: req.file.size,
     });
 
-    await r(Photo).save(photo);
+    try {
+      await r(Photo).save(photo);
+    } catch (error) {
+      try { fs.unlinkSync(req.file.path); } catch {}
+      throw error;
+    }
 
     res.status(201).json({
       id: photo.id,
@@ -531,6 +647,10 @@ export async function documentsByPatient(req: Request, res: Response, next: Next
 
 export async function documentCreate(req: Request, res: Response, next: NextFunction) {
   try {
+    assertUuid(req.params.patientId);
+    const patient = await r(Patient).findOneBy({ id: req.params.patientId, user_id: uid(req) });
+    if (!patient) throw AppError.notFound('Paciente não encontrado');
+    if (!req.body.name) throw AppError.badRequest('Nome do documento obrigatório');
     const doc = r(Document).create({ ...req.body, patient_id: req.params.patientId, user_id: uid(req) });
     await r(Document).save(doc);
     res.status(201).json(doc);
@@ -574,8 +694,18 @@ export async function monitoringRequestPhoto(req: Request, res: Response, next: 
 
 export async function monitoringStatus(req: Request, res: Response, next: NextFunction) {
   try {
-    const p = await r(Patient).findOneBy({ id: req.params.patientId, user_id: uid(req) });
-    res.json({ patientName: p?.name || '', status: 'online', lastSeen: new Date() });
+    assertUuid(req.params.patientId);
+    const patient = await r(Patient).findOneBy({ id: req.params.patientId, user_id: uid(req) });
+    if (!patient) throw AppError.notFound('Paciente não encontrado');
+    const last = await r(MonitoringMessage).findOne({
+      where: { patient_id: req.params.patientId, user_id: uid(req) },
+      order: { created_at: 'DESC' },
+    });
+    res.json({
+      patientName: patient.name,
+      status: last ? 'registrado' : 'sem mensagens',
+      lastSeen: last?.created_at || null,
+    });
   } catch (e) { next(e); }
 }
 
@@ -584,17 +714,33 @@ export async function monitoringStatus(req: Request, res: Response, next: NextFu
 // ══════════════════════════════════════════════════════
 export async function reportsList(req: Request, res: Response, next: NextFunction) {
   try {
-    const u = uid(req);
-    const [patients, evals] = await Promise.all([
-      r(Patient).count({ where: { user_id: u } }),
-      r(Evolution).count({ where: { user_id: u } }),
-    ]);
+    const userId = uid(req);
+    const raw = await r(Evolution).createQueryBuilder('e')
+      .select("DATE(e.created_at)", 'day')
+      .addSelect('COUNT(*)', 'count')
+      .where("e.user_id = :userId AND e.created_at >= CURRENT_DATE - INTERVAL '6 days'", { userId })
+      .groupBy('day')
+      .orderBy('day', 'ASC')
+      .getRawMany();
+
+    const byDay = new Map(raw.map((row: any) => [String(row.day).slice(0, 10), Number(row.count) || 0]));
+    const series = Array.from({ length: 7 }, (_, index) => {
+      const d = new Date();
+      d.setHours(0, 0, 0, 0);
+      d.setDate(d.getDate() - (6 - index));
+      return byDay.get(d.toISOString().slice(0, 10)) || 0;
+    });
+
+    const patients = await r(Patient).count({ where: { user_id: userId } });
+    const assessments = await r(WoundAssessment).count({ where: { user_id: userId } });
+    const evolutions = await r(Evolution).count({ where: { user_id: userId } });
+
     res.json([
-      { label: 'Perfil dos pacientes', value: patients, type: 'link' },
-      { label: 'Evolução das feridas', value: evals, type: 'link' },
-      { label: 'Evolução das estomias', value: 0, type: 'link' },
-      { label: 'Uso de coberturas', value: 0, type: 'link' },
-      { label: 'Indicadores clínicos', value: 0, type: 'link' },
+      { label: 'Perfil dos pacientes', value: patients, series, type: 'link' },
+      { label: 'Evolução das feridas', value: evolutions, series, type: 'link' },
+      { label: 'Evolução das estomias', value: 0, series: [0, 0, 0, 0, 0, 0, 0], type: 'link' },
+      { label: 'Uso de coberturas', value: 0, series: [0, 0, 0, 0, 0, 0, 0], type: 'link' },
+      { label: 'Indicadores clínicos', value: assessments, series, type: 'link' },
     ]);
   } catch (e) { next(e); }
 }

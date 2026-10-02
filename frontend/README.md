@@ -203,7 +203,6 @@ src/
 │   ├── PhotosList/             → fotos por paciente (menu lateral)
 │   └── Stock/
 ├── data/
-│   └── mockData.js       → dados fictícios usados como fallback pelos serviços
 ├── App.jsx               → definição de todas as rotas
 ├── main.jsx              → bootstrap da aplicação (inclui o ToastProvider)
 └── index.css             → tokens de design (cores, tipografia, espaçamentos)
