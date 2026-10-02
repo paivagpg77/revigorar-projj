@@ -1,0 +1,188 @@
+.assessment-detail-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.assessment-detail-actions > div {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.assessment-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+  margin-bottom: var(--space-4);
+}
+
+.assessment-detail-patient {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.assessment-detail-patient h1 {
+  margin: 0 0 4px;
+  font-size: var(--fs-sm);
+  color: var(--color-primary);
+}
+
+.assessment-detail-patient h2 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.assessment-detail-patient p {
+  margin: 5px 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--fs-sm);
+}
+
+.assessment-detail-section {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+  margin-bottom: var(--space-4);
+}
+
+.assessment-detail-section h3 {
+  margin: 0 0 var(--space-4);
+  font-size: 16px;
+}
+
+.assessment-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.assessment-detail-grid--four {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.assessment-detail-field {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.assessment-detail-field--wide {
+  grid-column: 1 / -1;
+}
+
+.assessment-detail-field span {
+  color: var(--color-text-muted);
+  font-size: var(--fs-xs);
+}
+
+.assessment-detail-field strong {
+  color: var(--color-text);
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.assessment-score-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.assessment-score-row > div {
+  background: var(--color-bg-soft);
+  border-radius: var(--radius-sm);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.assessment-score-row span {
+  color: var(--color-text-muted);
+  font-size: var(--fs-xs);
+}
+
+.assessment-score-row strong {
+  color: var(--color-primary-dark);
+  font-size: 22px;
+}
+
+.assessment-detail-footer {
+  text-align: center;
+  color: var(--color-text-faint);
+  font-size: 11px;
+  padding: 8px 0 20px;
+}
+
+@media (max-width: 900px) {
+  .assessment-detail-grid--four,
+  .assessment-score-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 650px) {
+  .assessment-detail-actions,
+  .assessment-detail-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .assessment-detail-actions > div {
+    flex-wrap: wrap;
+  }
+
+  .assessment-detail-grid,
+  .assessment-detail-grid--four,
+  .assessment-score-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .assessment-printable,
+  .assessment-printable * {
+    visibility: visible !important;
+  }
+
+  .assessment-printable {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    background: white !important;
+  }
+
+  .assessment-detail-section,
+  .assessment-detail-header {
+    break-inside: avoid;
+    box-shadow: none !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+}

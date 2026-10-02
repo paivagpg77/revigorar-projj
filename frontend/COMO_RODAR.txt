@@ -10,5 +10,13 @@ REVIGORAR FRONTEND
 
 Abra http://localhost:5173
 
-Este frontend não usa mockData.js. As páginas autenticadas usam exclusivamente a API.
+O frontend não usa mockData.js nem dados de demonstração como fallback.
+As páginas autenticadas usam exclusivamente a API.
+
+AVALIAÇÕES
+- Acesse /avaliacoes.
+- A aba "Ver avaliações" lista somente avaliações salvas no banco.
+- Clique em "Ver avaliação" para abrir os dados completos.
+- "Gerar PDF" abre a impressão A4; no diálogo do navegador escolha "Salvar como PDF".
+
 Fotos são enviadas como multipart/form-data para o backend e exibidas a partir de /uploads.

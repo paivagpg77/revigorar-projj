@@ -45,6 +45,9 @@ export default function WoundAssessment() {
           data[key] = [...(data[key] || []), value]
         } else data[key] = value
       }
+      if (label === 'Características' && !Object.prototype.hasOwnProperty.call(data, 'sinais_infeccao')) {
+        data.sinais_infeccao = []
+      }
       const saved = await saveWoundAssessmentSection(id, label, data)
       setAssessment((prev) => ({ ...(prev || {}), ...(saved || {}) }))
       showToast(`${label} salvo com sucesso.`)
@@ -121,7 +124,7 @@ export default function WoundAssessment() {
             <div className="form-grid">
               <div className="form-field"><label>Cobertura indicada</label><input name="cobertura_indicada" defaultValue={getSaved('care_plan', 'cobertura_indicada')} /></div>
               <div className="form-field"><label>Frequência de troca</label><input name="frequencia_de_troca" defaultValue={getSaved('care_plan', 'frequencia_de_troca')} /></div>
-              <div className="form-field"><label>Retorno previsto</label><input name="retorno_previsto" type="date" defaultValue={getSaved('care_plan', 'retorno_previsto')} /></div>
+              <div className="form-field"><label>Retorno previsto</label><input name="retorno_previsto" placeholder="Ex.: 7 dias" defaultValue={getSaved('care_plan', 'retorno_previsto')} /></div>
             </div>
             <div className="form-field"><label>Orientações ao paciente/cuidador</label><textarea name="orientacoes_ao_paciente_cuidador" rows={3} defaultValue={getSaved('care_plan', 'orientacoes_ao_paciente_cuidador')} /></div>
             <div className="form-field"><label>Encaminhamentos</label><textarea name="encaminhamentos" rows={2} defaultValue={getSaved('care_plan', 'encaminhamentos')} /></div>

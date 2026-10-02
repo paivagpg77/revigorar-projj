@@ -16,6 +16,7 @@ import Reports from './pages/Reports/Reports.jsx'
 import Settings from './pages/Settings/Settings.jsx'
 import Agenda from './pages/Agenda/Agenda.jsx'
 import Assessments from './pages/Assessments/Assessments.jsx'
+import AssessmentDetails from './pages/Assessments/AssessmentDetails.jsx'
 import EvolutionsFeed from './pages/EvolutionsFeed/EvolutionsFeed.jsx'
 import PrescriptionsBoard from './pages/PrescriptionsBoard/PrescriptionsBoard.jsx'
 import Stock from './pages/Stock/Stock.jsx'
@@ -44,6 +45,7 @@ export default function App() {
         <Route path="/pacientes/:id/monitoramento" element={<RemoteMonitoring />} />
         <Route path="/agenda" element={<Agenda />} />
         <Route path="/avaliacoes" element={<Assessments />} />
+        <Route path="/avaliacoes/:patientId" element={<AssessmentDetails />} />
         <Route path="/evolucoes" element={<EvolutionsFeed />} />
         <Route path="/prescricoes" element={<PrescriptionsBoard />} />
         <Route path="/estoque" element={<Stock />} />
